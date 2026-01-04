@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Halal Open Food Facts</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=20251229">
+</head>
+<body>
+    <div class="top-strip">
+        <div class="top-strip__content">
+            <div class="top-strip__left">
+                <select id="country-select" class="top-strip__select">
+                    <option value="">🌍 Choisir un pays</option>
+                </select>
+                <select id="language-select" class="top-strip__select">
+                    <option value="">🌐 Choisir une langue</option>
+                </select>
+                <span class="status-pill" data-i18n="signin_strip_badge">🔐 Accès contributeur</span>
+            </div>
+            <p class="top-strip__notice" data-i18n="signin_strip_notice">Votre compte Open Food Facts fonctionne ici.</p>
+        </div>
+    </div>
+
+    <header class="site-header">
+        <div class="site-header__inner">
+            <a class="brand" href="index.html">
+                <img src="assets/images/obf.PNG" alt="Halal Open Food Facts" class="brand__logo">
+                <div class="brand__text">
+                    <span>Halal Open Food Facts</span>
+                    <small>Powered by Open Food Facts</small>
+                </div>
+            </a>
+            <div class="mega-search mega-search--accent">
+                <input type="text" placeholder="Rechercher depuis la base" disabled>
+                <button disabled style="opacity:.5; cursor:not-allowed;">Recherche</button>
+            </div>
+            <nav class="primary-nav">
+                <a href="add.html" class="ghost-btn ghost-btn--dark" data-i18n="community_cta_primary">Ajouter un produit</a>
+                <a href="index.html#app-mobile" class="outline-btn" data-i18n="hero_cta_app">App mobile</a>
+                <a href="index.html" class="solid-btn" data-i18n="nav_back">Retour</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="auth-shell">
+            <div class="auth-card">
+                <p class="status-pill" data-i18n="signin_card_badge">Compte Open Food Facts</p>
+                <h1 data-i18n="signin_card_title">Se connecter</h1>
+                <p data-i18n="signin_card_desc">Vous serez redirigé vers l'espace officiel pour valider votre session.</p>
+
+                <form action="https://world.openfoodfacts.org/cgi/login.pl" method="POST" target="_blank">
+                    <div class="input-group">
+                        <label for="user_id" data-i18n="signin_user_label">Identifiant</label>
+                        <input type="text" id="user_id" name="user_id" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="password" data-i18n="signin_password_label">Mot de passe</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <input type="hidden" name="redirect_to" value="https://world.openfoodfacts.org">
+                    <button type="submit" data-i18n="signin_submit">Se connecter via Open Food Facts</button>
+                </form>
+
+                <footer>
+                    <p data-i18n-html="signin_footer_links"><a href="https://world.openfoodfacts.org/cgi/user.pl" target="_blank" rel="noopener">Créer un compte</a> · <a href="https://world.openfoodfacts.org/cgi/reset_password.pl" target="_blank" rel="noopener">Mot de passe oublié</a></p>
+                </footer>
+            </div>
+
+            <aside class="auth-side">
+                <h2 data-i18n="signin_aside_title">Pourquoi un compte ?</h2>
+                <p data-i18n="signin_aside_desc1">Il vous permet d'ajouter des produits, valider les ingrédients sensibles et suivre vos contributions.</p>
+                <p data-i18n="signin_aside_desc2">La même identité fonctionne sur Open Food Facts et Halal Open Food Facts.</p>
+                <a href="index.html#communautes" class="ghost-btn" data-i18n="signin_aside_cta">Découvrir la communauté →</a>
+            </aside>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="site-footer__grid">
+            <div>
+                <h4 data-i18n="footer_project_title">Projet</h4>
+                <ul>
+                    <li><a href="legal.html" data-i18n="footer_project_legal">Mentions légales</a></li>
+                    <li><a href="#" data-i18n="footer_project_finance">Transparence financière</a></li>
+                    <li><a href="#" data-i18n="footer_project_press">Contact presse</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 data-i18n="footer_discover_title">Découvrir</h4>
+                <ul>
+                    <li><a href="index.html#catalogue" data-i18n="footer_discover_catalog">Catalogue</a></li>
+                    <li><a href="index.html#engagements" data-i18n="footer_discover_commitments">Engagements</a></li>
+                    <li><a href="index.html#communautes" data-i18n="footer_discover_community">Communauté</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 data-i18n="footer_contribute_title">Contribuer</h4>
+                <ul>
+                    <li><a href="add.html" data-i18n="footer_contribute_add">Ajouter un produit</a></li>
+                    <li><a href="#" data-i18n="footer_contribute_translate">Traduire</a></li>
+                    <li><a href="#" id="footer-donate-link" data-i18n="footer_contribute_donate">Faire un don</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 data-i18n="footer_follow_title">Suivez-nous</h4>
+                <div class="social">
+                    <a href="#" data-i18n="footer_social_twitter">🐦 Twitter</a>
+                    <a href="#" data-i18n="footer_social_instagram">📸 Instagram</a>
+                    <a href="#" data-i18n="footer_social_linkedin">💼 LinkedIn</a>
+                </div>
+            </div>
+        </div>
+        <p class="site-footer__copy" data-i18n="footer_copy_full">© 2025 Halal Open Food Facts · Licence Open Database.</p>
+    </footer>
+    <script src="assets/js/locale.js"></script>
+</body>
+</html>
