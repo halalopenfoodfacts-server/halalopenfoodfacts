@@ -47,6 +47,96 @@
             </div>
         </section>
 
+        <div class="edit-portal" id="edit-portal" hidden>
+            <div class="edit-portal__backdrop" id="edit-close-backdrop"></div>
+            <div class="edit-portal__panel" role="dialog" aria-modal="true" aria-labelledby="edit-panel-title">
+                <button type="button" class="edit-portal__close" id="edit-close-button" aria-label="Fermer">×</button>
+                <header class="edit-portal__header">
+                    <p class="edit-portal__eyebrow">Contribution instantanée</p>
+                    <h2 id="edit-panel-title">Éditer cette fiche directement</h2>
+                    <p class="edit-portal__lead">Connectez-vous avec votre compte Open Food Facts, proposez une correction et nous envoyons la mise à jour à l'API officielle.</p>
+                </header>
+                <form id="edit-form" class="edit-form">
+                    <input type="hidden" name="code" id="edit-code">
+                    <input type="hidden" name="lang" value="fr">
+                    <input type="hidden" name="json" value="1">
+                    <div class="edit-form__grid edit-form__grid--auth">
+                        <div class="edit-form__row">
+                            <label for="edit-user">Identifiant Open Food Facts</label>
+                            <input type="text" id="edit-user" name="user_id" placeholder="ex : contributeur_halal" required>
+                        </div>
+                        <div class="edit-form__row edit-form__row--token">
+                            <label for="edit-api-key">Connexion OAuth / clé API</label>
+                            <div class="api-connect">
+                                <input type="text" id="edit-api-key" name="user_token" placeholder="Coller votre clé API ou token OAuth" autocomplete="off" required>
+                                <button type="button" class="ghost-btn ghost-btn--tight" id="oauth-sync">🔐 Synchroniser ma session</button>
+                            </div>
+                            <p class="api-connect__hint">1. Ouvrez la <a href="https://world.openfoodfacts.org/cgi/login.pl" target="_blank" rel="noopener">page d'authentification officielle</a>, 2. connectez-vous, 3. revenez ici et cliquez sur « Synchroniser » pour récupérer un token sans partager votre mot de passe.</p>
+                            <label class="remember-toggle">
+                                <input type="checkbox" id="remember-api-key" checked>
+                                Mémoriser cette clé sur cet appareil
+                            </label>
+                            <p class="api-connect__status" id="oauth-status" aria-live="polite"></p>
+                        </div>
+                    </div>
+                    <div class="edit-form__row">
+                        <label for="edit-name">Nom du produit</label>
+                        <input type="text" id="edit-name" name="product_name" placeholder="Nom complet figurant sur l'emballage">
+                    </div>
+                    <div class="edit-form__grid">
+                        <div class="edit-form__row">
+                            <label for="edit-brands">Marque(s)</label>
+                            <input type="text" id="edit-brands" name="brands" placeholder="Marque principale, sous-marque">
+                        </div>
+                        <div class="edit-form__row">
+                            <label for="edit-quantity">Quantité</label>
+                            <input type="text" id="edit-quantity" name="quantity" placeholder="200 g, 1 L, 6 x 33 cl">
+                        </div>
+                    </div>
+                    <div class="edit-form__row">
+                        <label for="edit-ingredients">Ingrédients (FR)</label>
+                        <textarea id="edit-ingredients" name="ingredients_text_fr" rows="4" placeholder="Liste exacte telle qu'indiquée sur le packaging"></textarea>
+                    </div>
+                    <div class="edit-form__row">
+                        <label for="edit-labels">Labels halal / certifications</label>
+                        <input type="text" id="edit-labels" name="labels" placeholder="ex : halal, halal-certification, halal-hfce">
+                    </div>
+                    <div class="edit-form__row">
+                        <label for="edit-comment">Message aux modérateurs</label>
+                        <textarea id="edit-comment" name="comment" rows="3" placeholder="Source ou justification de votre mise à jour"></textarea>
+                    </div>
+                    <div class="edit-form__row edit-form__row--photo">
+                        <div class="edit-form__row-heading">
+                            <label for="edit-photo-type">Ajouter une photo depuis ce tiroir</label>
+                            <p class="edit-form__helper">Renforcez la fiche en envoyant une photo front, ingrédients ou nutrition sans quitter la page.</p>
+                        </div>
+                        <div class="photo-upload" id="photo-uploader">
+                            <select id="edit-photo-type">
+                                <option value="front_fr">Face avant (FR)</option>
+                                <option value="ingredients_fr">Ingrédients (FR)</option>
+                                <option value="nutrition_fr">Tableau nutritionnel (FR)</option>
+                            </select>
+                            <input type="file" id="edit-photo-file" accept="image/*" capture="environment">
+                            <div class="photo-upload__actions">
+                                <button type="button" class="ghost-btn ghost-btn--tight" id="camera-start">🎥 Activer la caméra</button>
+                                <button type="button" class="ghost-btn ghost-btn--tight" id="camera-capture" disabled>📸 Capturer</button>
+                                <button type="button" class="ghost-btn ghost-btn--subtle" id="camera-stop" hidden>✖ Fermer</button>
+                            </div>
+                            <video id="camera-preview" class="photo-upload__video" autoplay playsinline muted hidden></video>
+                            <canvas id="camera-canvas" hidden></canvas>
+                            <img id="photo-preview" class="photo-upload__preview" alt="Prévisualisation de la photo" hidden>
+                            <p class="photo-upload__status" id="photo-status" aria-live="polite"></p>
+                        </div>
+                    </div>
+                    <div class="edit-form__actions">
+                        <button type="button" class="ghost-btn" id="edit-cancel">Annuler</button>
+                        <button type="submit" class="solid-btn" id="edit-submit">Envoyer la mise à jour</button>
+                    </div>
+                    <p class="edit-form__status" id="edit-status" role="status" aria-live="polite"></p>
+                </form>
+            </div>
+        </div>
+
         <section class="app-callout product-app-callout" id="app-mobile">
             <div class="app-callout__content">
                 <h2 data-i18n="product_app_title">Scannez et complétez les fiches</h2>

@@ -15,8 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const excludedCountDisplay = document.getElementById('excluded-count');
     const contributorsCountDisplay = document.getElementById('contributors-count');
     const countryCountDisplay = document.getElementById('country-count');
-    const barcodeInput = document.getElementById('barcode-input');
     const barcodeButton = document.getElementById('barcode-button');
+    const barcodeOverlay = document.getElementById('barcode-overlay');
+    const barcodeVideo = document.getElementById('barcode-video');
+    const barcodeCancelButton = document.getElementById('barcode-cancel');
+    const barcodeManualPrompt = document.getElementById('barcode-manual-prompt');
     const liveFeedContainer = document.getElementById('live-feed-list');
     const liveFeedRefresh = document.getElementById('refresh-live-feed');
     const liveFeedLoadingText = document.getElementById('live-feed-loading-text');
@@ -24,6 +27,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const countryContext = document.getElementById('country-context');
     const countryChip = document.getElementById('country-chip');
     const countryMessage = document.getElementById('country-message');
+    const accountWidget = document.getElementById('account-widget');
+    const accountStatusLabel = document.getElementById('account-status');
+    const accountHintLabel = document.getElementById('account-hint');
+    const accountPrimaryAction = document.getElementById('account-action-primary');
+    const accountSecondaryAction = document.getElementById('account-action-secondary');
+    const welcomeBanner = document.getElementById('welcome-banner');
+    const welcomeTitle = document.getElementById('welcome-title');
+    const welcomeMessage = document.getElementById('welcome-message');
+    const welcomeDismiss = document.getElementById('welcome-dismiss');
+    const userGreeting = document.getElementById('user-greeting');
+    const userGreetingName = document.getElementById('user-greeting-name');
+    const accountChip = document.getElementById('account-chip');
+    const accountChipName = document.getElementById('account-chip-name');
+    const accountChipAvatar = document.getElementById('account-chip-avatar');
+    const advancedToggleButton = document.getElementById('advanced-filter-toggle');
+    const advancedPanel = document.getElementById('advanced-filter-panel');
+    const advancedIndicator = document.getElementById('advanced-filter-indicator');
+    const advancedResetButton = document.getElementById('advanced-filter-reset');
+    const advancedApplyButton = document.getElementById('advanced-filter-apply');
+    const advancedChips = document.querySelectorAll('[data-advanced-filter]');
+    const palmOilToggle = document.getElementById('advanced-palm-toggle');
+    const apiLiveSection = document.getElementById('api-live');
+    const apiLiveRefreshButton = document.getElementById('api-live-refresh');
+    const apiLiveCards = {
+        catalogue: prepareApiLiveCard('catalogue'),
+        stats: prepareApiLiveCard('stats'),
+        live: prepareApiLiveCard('live')
+    };
 
     console.log('Elements found:', {
         productGrid: !!productGrid,
@@ -37,52 +68,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const API_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
+    const API_DOMAIN = 'https://world.openfoodfacts.org';
+    const SEARCH_API_URL = '/proxy/search/search';          // Proxy local → search.openfoodfacts.org (10K max)
+    const CATALOGUE_API_URL = '/proxy/v2/search';           // Proxy local → /api/v2/search (4M+ produits)
+    const SESSION_ENDPOINT = `${API_DOMAIN}/cgi/session.pl?json=1`;
+    const ACCOUNT_CREATE_URL = `${API_DOMAIN}/cgi/user.pl`;
+    const LOCAL_SIGNUP_PAGE = 'signup.html';
+    const ACCOUNT_LOGOUT_URL = `${API_DOMAIN}/cgi/logout.pl`;
+    const CONTRIBUTOR_BASE_URL = `${API_DOMAIN}/contributor/`;
+    const CONTRIBUTORS_FACET_ENDPOINT = '/proxy/facets/contributors.json';
+    const AUTH_WELCOME_KEY = 'halal-auth-welcome';
+    const PORTAL_ID = API_DOMAIN.includes('openbeautyfacts') ? 'beauty' : 'food';
+    const AUTH_INTENT_TTL = 10 * 60 * 1000;
+    const AUTH_RETRY_MAX = 6;
+    const AUTH_RETRY_DELAY = 2000;
     const PAGE_SIZE = 50;
     const LIVE_FEED_LIMIT = 6;
     const DEFAULT_PRODUCT_IMAGE = 'https://static.openfoodfacts.org/images/misc/product-default.png';
     const numberFormatter = new Intl.NumberFormat('fr-FR');
-    const BANNED_CATEGORY_TAGS = [
-        'en:alcoholic-beverages',
-        'en:beers',
-        'en:wines',
-        'en:aperitifs',
-        'en:spirits',
-        'en:whiskies',
-        'en:champagnes',
-        'en:liqueurs',
-        'en:brandy',
-        'en:digestifs',
-        'fr:boissons-alcoolisees'
-    ];
-    const BANNED_INGREDIENT_TAGS = [
-        'en:pork',
-        'fr:porc',
-        'en:pork-meat',
-        'en:pork-products',
-        'en:pork-ham',
-        'en:pork-sausages',
-        'en:pork-fat',
-        'en:pork-gelatin',
-        'en:porcine-gelatin',
-        'fr:gelatine-de-porc'
-    ];
-    const BANNED_INGREDIENT_KEYWORDS = [
-        'porc',
-        'pork',
-        'porcine',
-        'jamón de cerdo',
-        'gelatine de porc',
-        'gélatine de porc',
-        'gelatin de porc',
-        'bacon',
-        'lardon'
-    ];
-    const BANNED_NAME_KEYWORDS = [
-        'beer', 'biere', 'bière', 'vin', 'wine', 'aperitif', 'apéritif', 'spirit', 'whisky', 'whiskey',
-        'vodka', 'rhum', 'rum', 'gin', 'champagne', 'liqueur', 'digestif', 'porto', 'brandy',
-        'charcuterie', 'saucisse', 'saucisson', 'ham', 'jambon'
-    ];
+    const NOVA_TAG_MAP = {
+        '1': 'en:1-unprocessed-or-minimally-processed-foods',
+        '2': 'en:2-processed-culinary-ingredients',
+        '3': 'en:3-processed-foods',
+        '4': 'en:4-ultra-processed-food-and-drink-products'
+    };
     
     let currentPage = 1;
     let currentFilters = {
@@ -90,87 +99,171 @@ document.addEventListener('DOMContentLoaded', () => {
         tags: [],
         category: '',
         sort: 'popularity',
-        country: (window.LocaleState && window.LocaleState.country) || ''
+        country: '',
+        advanced: createEmptyAdvancedFilters()
     };
     let recentLiveFeedProducts = [];
     let liveFeedAbortController;
+    let barcodeDetector;
+    let barcodeStream;
+    let barcodeScanFrame;
+    let barcodeScannerActive = false;
+    let cachedAuthIntent;
+    let authRetryTimer = null;
+    let authRetryAttempts = 0;
 
     // Fetch and display products
-    function filterHalalProducts(products = []) {
-        return products.filter(product => !violatesHalalGuardrails(product));
+    // ============================================================
+    // COUCHE 1 : Recherche textuelle → search.openfoodfacts.org
+    // (10K max, suffisant pour une recherche utilisateur)
+    // ============================================================
+    async function searchByText(query, page = 1) {
+        const params = new URLSearchParams({
+            q: query,
+            page_size: PAGE_SIZE,
+            page: page,
+            fields: 'code,product_name,brands,image_front_small_url,image_front_url,nutriscore_grade,nova_group,ecoscore_grade'
+        });
+
+        // Tri
+        const sort = currentFilters.sort;
+        if (sort && sort !== 'popularity') {
+            params.append('sort_by', sort);
+        } else {
+            params.append('sort_by', 'unique_scans_n');
+        }
+
+        // Filtres Search-a-licious
+        const filters = [];
+        currentFilters.tags.forEach(tag => filters.push(`labels_tags:${tag}`));
+        if (currentFilters.category) filters.push(`categories_tags:${currentFilters.category}`);
+        if (currentFilters.country)  filters.push(`countries_tags:en:${currentFilters.country}`);
+        const advanced = currentFilters?.advanced;
+        if (advanced) {
+            (advanced.labels || []).forEach(label => filters.push(`labels_tags:${label}`));
+            (advanced.nutri  || []).forEach(grade  => filters.push(`nutriscore_grade:${grade.toLowerCase()}`));
+            (advanced.nova   || []).forEach(group  => filters.push(`nova_group:${group}`));
+        }
+        if (filters.length > 0) params.append('filters', filters.join(' AND '));
+
+        const response = await fetch(`${SEARCH_API_URL}?${params.toString()}`);
+        if (!response.ok) throw new Error(`Search-a-licious HTTP ${response.status}`);
+        const data = await parseApiJsonResponse(response, 'Recherche texte');
+        // Normaliser au format commun { products, count }
+        return { products: data.hits || [], count: data.count || 0 };
     }
 
+    // ============================================================
+    // COUCHE 2 : Catalogue général → /api/v2/search
+    // (accès aux 4M+ produits via pagination, sans limite)
+    // ============================================================
+    async function loadCatalogue(page = 1) {
+        const params = new URLSearchParams({
+            page: page,
+            page_size: PAGE_SIZE,
+            fields: 'code,product_name,brands,image_front_small_url,image_front_url,nutriscore_grade,nova_group,ecoscore_grade',
+            sort_by: 'popularity_key'
+        });
+
+        // Filtres tags halal
+        currentFilters.tags.forEach(tag => params.append('labels_tags', tag));
+        if (currentFilters.category) params.append('categories_tags', currentFilters.category);
+        if (currentFilters.country)  params.append('countries_tags', `en:${currentFilters.country}`);
+
+        // Filtres avancés
+        const advanced = currentFilters?.advanced;
+        if (advanced) {
+            (advanced.labels || []).forEach(label => params.append('labels_tags', label));
+            (advanced.nutri  || []).forEach(grade  => params.append('nutrition_grades_tags', `en:${grade.toLowerCase()}`));
+            (advanced.nova   || []).forEach(group  => params.append('nova_groups_tags',       `en:${group}`));
+            if (advanced.palmOilFree) params.append('ingredients_analysis_tags', 'en:palm-oil-free');
+        }
+
+        const response = await fetch(`${CATALOGUE_API_URL}?${params.toString()}`);
+        if (!response.ok) throw new Error(`Catalogue API v2 HTTP ${response.status}`);
+        const rawText = await response.text();
+        // Si v2 retourne du HTML (page d'erreur avec HTTP 200), lever une erreur pour déclencher le fallback
+        if (rawText.includes('<!DOCTYPE html>') || rawText.includes('<html')) {
+            throw new Error('Catalogue v2: réponse HTML reçue (API en panne)');
+        }
+        const data = JSON.parse(rawText);
+        // v2 retourne { products, count }
+        return { products: data.products || [], count: data.count || 0 };
+    }
+
+    // ============================================================
+    // DISPATCHER : choisit la bonne couche automatiquement
+    // ============================================================
     async function fetchProducts(page = 1) {
         productGrid.innerHTML = '<p style="text-align: center; padding: 2rem;">Chargement des produits...</p>';
-        
-        console.log('Fetching products for page:', page);
-        console.log('Current filters:', currentFilters);
-        
+        const requestStartedAt = performance.now();
+        setApiLiveState('catalogue', 'pending');
+
+        const hasTextSearch = !!(currentFilters.search && currentFilters.search.trim().length > 0);
+
         try {
-            const params = new URLSearchParams({
-                search_simple: 1,
-                action: 'process',
-                search_terms: currentFilters.search,
-                page_size: PAGE_SIZE,
-                page: page,
-                json: 1
-            });
+            let result;
 
-            // Add filter tags
-            let tagIndex = 1;
-            currentFilters.tags.forEach(tag => {
-                params.append(`tagtype_${tagIndex}`, 'labels');
-                params.append(`tag_contains_${tagIndex}`, 'contains');
-                params.append(`tag_${tagIndex}`, tag);
-                tagIndex += 1;
-            });
+            if (hasTextSearch) {
+                // COUCHE 1 : Recherche texte → Search-a-licious
+                console.log('[API] Recherche texte via search.openfoodfacts.org:', currentFilters.search);
+                result = await searchByText(currentFilters.search, page);
+            } else {
+                // COUCHE 2 : Catalogue → /api/v2/search (4M+ produits)
+                // Si v2 répond avec du HTML (200 + page d'erreur), parseApiJsonResponse lève
+                // une erreur "temporairement indisponible" qu'on attrape ici pour basculer.
+                console.log('[API] Catalogue via /api/v2/search (4M+ produits), page:', page);
+                let v2Failed = false;
+                try {
+                    result = await loadCatalogue(page);
+                } catch (v2Error) {
+                    v2Failed = true;
+                    console.warn('[API] /api/v2/search indisponible, bascule vers Search-a-licious:', v2Error.message);
+                }
 
-            if (currentFilters.category) {
-                params.append(`tagtype_${tagIndex}`, 'categories');
-                params.append(`tag_contains_${tagIndex}`, 'contains');
-                params.append(`tag_${tagIndex}`, currentFilters.category);
-                tagIndex += 1;
-            }
-
-            if (currentFilters.country) {
-                params.append(`tagtype_${tagIndex}`, 'countries');
-                params.append(`tag_contains_${tagIndex}`, 'contains');
-                params.append(`tag_${tagIndex}`, `en:${currentFilters.country}`);
-                tagIndex += 1;
-            }
-
-            tagIndex = appendHalalExclusions(params, tagIndex);
-
-            // Add sorting
-            if (currentFilters.sort) {
-                if (currentFilters.sort === 'popularity') {
-                    params.append('sort_by', 'unique_scans_n');
-                } else {
-                    params.append('sort_by', currentFilters.sort);
+                if (v2Failed) {
+                    // Fallback → Search-a-licious (10K produits)
+                    const params = new URLSearchParams({
+                        sort_by: 'unique_scans_n',
+                        page_size: PAGE_SIZE,
+                        page: page,
+                        fields: 'code,product_name,brands,image_front_small_url,image_front_url,nutriscore_grade,nova_group,ecoscore_grade'
+                    });
+                    const filters = [];
+                    currentFilters.tags.forEach(tag => filters.push(`labels_tags:${tag}`));
+                    if (currentFilters.category) filters.push(`categories_tags:${currentFilters.category}`);
+                    if (currentFilters.country)  filters.push(`countries_tags:en:${currentFilters.country}`);
+                    if (filters.length > 0) params.append('filters', filters.join(' AND '));
+                    const fbRes = await fetch(`${SEARCH_API_URL}?${params.toString()}`);
+                    if (!fbRes.ok) throw new Error(`Fallback Search-a-licious HTTP ${fbRes.status}`);
+                    const fbData = await parseApiJsonResponse(fbRes, 'Fallback catalogue');
+                    result = { products: fbData.hits || [], count: fbData.count || 0 };
                 }
             }
 
-            const url = `${API_URL}?${params.toString()}`;
-            console.log('Fetching from URL:', url);
-            
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            console.log('Received data:', data);
-            const safeProducts = filterHalalProducts(data.products || []);
-            console.log('Number of halal-safe products:', safeProducts.length);
-            
-            displayProducts(safeProducts);
-            displayPagination(page, data.count || safeProducts.length || 0);
+            displayProducts(result.products);
+            displayPagination(page, result.count);
             currentPage = page;
-            
+            setApiLiveState('catalogue', 'ok', {
+                duration: performance.now() - requestStartedAt,
+                timestamp: Date.now()
+            });
+
         } catch (error) {
-            console.error("Could not fetch products:", error);
-            productGrid.innerHTML = '<p style="text-align: center; padding: 2rem; color: red;">Impossible de charger les produits. Merci de réessayer.</p>';
+            console.error('Could not fetch products:', error);
+            const isApiDown = error.message.includes('temporairement indisponible') || error.message.includes('temporarily unavailable');
+            const errorHtml = isApiDown
+                ? `<div style="text-align: center; padding: 3rem; max-width: 600px; margin: 0 auto;">
+                    <p style="font-size: 3rem; margin-bottom: 1rem;">🔌</p>
+                    <p style="color: #ff6600; font-weight: 600; margin-bottom: 1rem; font-size: 1.3rem;">L'API Open Food Facts est temporairement indisponible</p>
+                    <p style="color: #666; margin-bottom: 1rem; line-height: 1.6;">Le service externe <strong>world.openfoodfacts.org</strong> est actuellement en maintenance ou surchargé.</p>
+                    <p style="color: #888; margin-bottom: 2rem; font-size: 0.9rem;">Cette interruption est temporaire et indépendante de notre plateforme. Les données reviendront automatiquement dès que l'API sera rétablie.</p>
+                    <button onclick="location.reload()" style="background: #ff6600; color: white; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; box-shadow: 0 2px 8px rgba(255,102,0,0.3);">🔄 Réessayer maintenant</button>
+                    <p style="color: #999; margin-top: 1.5rem; font-size: 0.85rem;">Ou visitez directement <a href="https://world.openfoodfacts.org" target="_blank" style="color: #ff6600;">world.openfoodfacts.org</a> pour vérifier l'état du service</p>
+                  </div>`
+                : '<p style="text-align: center; padding: 2rem; color: red;">Impossible de charger les produits. Merci de réessayer.</p>';
+            productGrid.innerHTML = errorHtml;
+            setApiLiveState('catalogue', 'error', { message: error.message });
         }
     }
 
@@ -181,160 +274,171 @@ document.addEventListener('DOMContentLoaded', () => {
         return numberFormatter.format(Math.round(value));
     }
 
-    function appendHalalExclusions(params, startIndex = 1) {
+    async function parseApiJsonResponse(response, contextLabel = 'API request') {
+        const rawText = await response.text();
+        try {
+            return JSON.parse(rawText);
+        } catch (error) {
+            // Détecter si c'est une page HTML d'erreur (API en panne)
+            if (rawText.includes('<!DOCTYPE html>') || rawText.includes('<html')) {
+                throw new Error(`${contextLabel}: L'API Open Food Facts est temporairement indisponible. Veuillez réessayer dans quelques instants.`);
+            }
+            const snippet = rawText.slice(0, 140).replace(/\s+/g, ' ').trim();
+            throw new Error(`${contextLabel}: réponse JSON invalide (${response.status}) ${snippet}`);
+        }
+    }
+
+    function appendAdvancedFilters(params, startIndex = 1) {
+        const advanced = currentFilters?.advanced;
+        if (!advanced) {
+            return startIndex;
+        }
+
         let tagIndex = startIndex;
-        BANNED_CATEGORY_TAGS.forEach(tag => {
-            params.append(`tagtype_${tagIndex}`, 'categories');
-            params.append(`tag_contains_${tagIndex}`, 'does_not_contain');
-            params.append(`tag_${tagIndex}`, tag);
+
+        const appendTagFilter = (type, value) => {
+            if (!value) return;
+            params.append(`tagtype_${tagIndex}`, type);
+            params.append(`tag_contains_${tagIndex}`, 'contains');
+            params.append(`tag_${tagIndex}`, value);
             tagIndex += 1;
+        };
+
+        (advanced.labels || []).forEach(label => appendTagFilter('labels', label));
+
+        (advanced.nutri || []).forEach(grade => {
+            const normalizedGrade = (grade || '').toString().toLowerCase();
+            if (!normalizedGrade) return;
+            appendTagFilter('nutrition-grades', `en:${normalizedGrade}`);
         });
-        BANNED_INGREDIENT_TAGS.forEach(tag => {
-            params.append(`tagtype_${tagIndex}`, 'ingredients');
-            params.append(`tag_contains_${tagIndex}`, 'does_not_contain');
-            params.append(`tag_${tagIndex}`, tag);
-            tagIndex += 1;
+
+        (advanced.nova || []).forEach(group => {
+            const slug = NOVA_TAG_MAP[group];
+            if (slug) {
+                appendTagFilter('nova-groups', slug);
+            }
         });
+
+        if (advanced.palmOilFree) {
+            params.append('ingredients_from_palm_oil', '0');
+            params.append('ingredients_that_may_be_from_palm_oil', '0');
+        }
+
         return tagIndex;
     }
 
-    function buildLowercasedText(...chunks) {
-        return chunks.filter(Boolean).join(' ').toLowerCase();
+    function createEmptyAdvancedFilters() {
+        return {
+            nutri: [],
+            nova: [],
+            labels: [],
+            palmOilFree: false
+        };
     }
 
-    function violatesHalalGuardrails(product = {}) {
-        const categories = product.categories_tags || product.categories_hierarchy || [];
-        if (categories.some(tag => BANNED_CATEGORY_TAGS.includes(tag))) {
-            return true;
+    function normalizeAdvancedGroup(rawKey = '') {
+        const key = rawKey.toLowerCase();
+        if (key === 'label') {
+            return 'labels';
         }
-
-        const ingredientsTags = product.ingredients_tags || [];
-        if (ingredientsTags.some(tag => BANNED_INGREDIENT_TAGS.includes(tag))) {
-            return true;
+        if (key === 'nutriscore') {
+            return 'nutri';
         }
-
-        const textBlob = buildLowercasedText(
-            product.ingredients_text,
-            product.ingredients_text_fr,
-            product.ingredients_text_en,
-            product.ingredients_text_es,
-            product.ingredients_text_ar,
-            product.ingredients_text_with_allergens,
-            product.product_name,
-            product.generic_name
-        );
-
-        if (BANNED_INGREDIENT_KEYWORDS.some(keyword => textBlob.includes(keyword))) {
-            return true;
-        }
-
-        if (BANNED_NAME_KEYWORDS.some(keyword => textBlob.includes(keyword))) {
-            return true;
-        }
-
-        return false;
+        return key;
     }
 
     async function fetchInventoryStats(country = '') {
-        const baseParams = {
-            action: 'process',
-            search_simple: 1,
-            json: 1,
-            page_size: 1,
-            fields: 'code'
-        };
-
-        const totalParams = new URLSearchParams(baseParams);
-        const halalParams = new URLSearchParams(baseParams);
-        let halalStartIndex = 0;
-
-        if (country) {
-            totalParams.append('tagtype_0', 'countries');
-            totalParams.append('tag_contains_0', 'contains');
-            totalParams.append('tag_0', `en:${country}`);
-
-            halalParams.append('tagtype_0', 'countries');
-            halalParams.append('tag_contains_0', 'contains');
-            halalParams.append('tag_0', `en:${country}`);
-            halalStartIndex = 1;
+        // Essayer d'abord /api/v2/search (count réel 4M+)
+        try {
+            const params = new URLSearchParams({ page: 1, page_size: 1, fields: 'code' });
+            if (country) params.append('countries_tags', `en:${country}`);
+            const response = await fetch(`${CATALOGUE_API_URL}?${params.toString()}`);
+            if (!response.ok) throw new Error(`v2 stats HTTP ${response.status}`);
+            const data = await parseApiJsonResponse(response, 'Stats v2');
+            if (typeof data.count === 'number' && data.count > 10000) {
+                console.log('[Stats] API v2 opérationnelle, count réel:', data.count);
+                return { totalCount: data.count };
+            }
+            throw new Error('count v2 trop faible, bascule fallback');
+        } catch (v2Error) {
+            console.warn('[Stats] API v2 indisponible, bascule vers Search-a-licious:', v2Error.message);
         }
 
-        appendHalalExclusions(halalParams, halalStartIndex);
-
-        const [totalResponse, halalResponse] = await Promise.all([
-            fetch(`${API_URL}?${totalParams.toString()}`),
-            fetch(`${API_URL}?${halalParams.toString()}`)
-        ]);
-
-        if (!totalResponse.ok) {
-            throw new Error(`Total inventory count failed with status ${totalResponse.status}`);
+        // Fallback → Search-a-licious (10K max)
+        try {
+            const params = new URLSearchParams({ sort_by: 'unique_scans_n', page_size: 1, fields: 'code' });
+            if (country) params.append('filters', `countries_tags:en:${country}`);
+            const response = await fetch(`${SEARCH_API_URL}?${params.toString()}`);
+            if (!response.ok) throw new Error(`Search-a-licious stats HTTP ${response.status}`);
+            const data = await parseApiJsonResponse(response, 'Stats Search-a-licious');
+            const totalCount = typeof data.count === 'number' ? data.count : null;
+            return { totalCount };
+        } catch (error) {
+            console.error('fetchInventoryStats fallback error:', error);
+            return { totalCount: country ? null : 10000 };
         }
-
-        if (!halalResponse.ok) {
-            throw new Error(`Halal inventory count failed with status ${halalResponse.status}`);
-        }
-
-        const [totalData, halalData] = await Promise.all([
-            totalResponse.json(),
-            halalResponse.json()
-        ]);
-
-        const totalCount = typeof totalData.count === 'number' ? totalData.count : null;
-        const halalCount = typeof halalData.count === 'number' ? halalData.count : null;
-        const excludedCount = typeof totalCount === 'number' && typeof halalCount === 'number'
-            ? Math.max(totalCount - halalCount, 0)
-            : null;
-
-        return { totalCount, halalCount, excludedCount };
     }
 
     async function hydrateStats(selectedCountry = '') {
         if (!productCountDisplay && !contributorsCountDisplay && !excludedCountDisplay && !countryCountDisplay) return;
 
+        const statsStartedAt = performance.now();
+        setApiLiveState('stats', 'pending');
+
         try {
             const [inventoryStats, contributorsResponse] = await Promise.all([
                 fetchInventoryStats(selectedCountry),
-                fetch('https://world.openfoodfacts.org/facets/contributors.json')
+                fetch(CONTRIBUTORS_FACET_ENDPOINT)
             ]);
 
-            const { halalCount, excludedCount } = inventoryStats;
+            const { totalCount } = inventoryStats;
 
-            if (productCountDisplay && typeof halalCount === 'number') {
-                productCountDisplay.textContent = formatStatValue(halalCount, productCountDisplay.dataset.fallback);
+            if (productCountDisplay) {
+                if (typeof totalCount === 'number') {
+                    productCountDisplay.textContent = formatStatValue(totalCount);
+                } else {
+                    productCountDisplay.textContent = 'Chargement...';
+                }
             }
 
-            if (excludedCountDisplay && typeof excludedCount === 'number') {
-                excludedCountDisplay.textContent = formatStatValue(excludedCount, excludedCountDisplay.dataset.fallback);
+            if (excludedCountDisplay) {
+                excludedCountDisplay.textContent = '0';
             }
 
             if (contributorsResponse.ok && contributorsCountDisplay) {
-                const contributorsData = await contributorsResponse.json();
+                const contributorsData = await parseApiJsonResponse(contributorsResponse, 'Stats contributeurs');
                 const contributorCount = contributorsData?.tags?.length || contributorsData.count;
-                contributorsCountDisplay.textContent = formatStatValue(contributorCount, contributorsCountDisplay.dataset.fallback);
+                if (typeof contributorCount === 'number') {
+                    contributorsCountDisplay.textContent = formatStatValue(contributorCount);
+                } else {
+                    contributorsCountDisplay.textContent = 'Chargement...';
+                }
             }
 
             if (countryCountDisplay) {
-                countryCountDisplay.textContent = selectedCountry
-                    ? '1'
-                    : (countryCountDisplay.dataset.fallback || '180');
+                countryCountDisplay.textContent = selectedCountry ? '1' : '180';
             }
+
+            setApiLiveState('stats', 'ok', {
+                duration: performance.now() - statsStartedAt,
+                timestamp: Date.now()
+            });
 
         } catch (error) {
             console.warn('Stats hydration failed; falling back to defaults', error);
             if (productCountDisplay) {
-                productCountDisplay.textContent = productCountDisplay.dataset.fallback || '1M+';
+                productCountDisplay.textContent = 'Erreur';
             }
             if (excludedCountDisplay) {
-                excludedCountDisplay.textContent = excludedCountDisplay.dataset.fallback || '70K+';
+                excludedCountDisplay.textContent = '0';
             }
             if (contributorsCountDisplay) {
-                contributorsCountDisplay.textContent = contributorsCountDisplay.dataset.fallback || '100K';
+                contributorsCountDisplay.textContent = 'Erreur';
             }
             if (countryCountDisplay) {
-                countryCountDisplay.textContent = selectedCountry
-                    ? '1'
-                    : (countryCountDisplay.dataset.fallback || '—');
+                countryCountDisplay.textContent = '180';
             }
+            setApiLiveState('stats', 'error', { message: error.message });
         }
     }
 
@@ -371,6 +475,98 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function ensureAdvancedFiltersState() {
+        if (!currentFilters.advanced) {
+            currentFilters.advanced = createEmptyAdvancedFilters();
+        }
+        return currentFilters.advanced;
+    }
+
+    function getAdvancedActiveCount() {
+        const advanced = ensureAdvancedFiltersState();
+        const chipCount = (advanced.nutri?.length || 0)
+            + (advanced.nova?.length || 0)
+            + (advanced.labels?.length || 0);
+        return chipCount + (advanced.palmOilFree ? 1 : 0);
+    }
+
+    function updateAdvancedIndicator() {
+        if (!advancedIndicator) return;
+        const activeCount = getAdvancedActiveCount();
+        const suffix = activeCount > 1 ? 'actifs' : 'actif';
+        advancedIndicator.textContent = `${activeCount} ${suffix}`;
+        advancedIndicator.dataset.count = String(activeCount);
+        if (advancedToggleButton) {
+            advancedToggleButton.classList.toggle('has-active-filters', activeCount > 0);
+        }
+    }
+
+    function setAdvancedPanelVisibility(forceState) {
+        if (!advancedPanel) return;
+        const shouldShow = typeof forceState === 'boolean'
+            ? forceState
+            : advancedPanel.hasAttribute('hidden');
+        if (shouldShow) {
+            advancedPanel.removeAttribute('hidden');
+        } else {
+            advancedPanel.setAttribute('hidden', '');
+        }
+        if (advancedToggleButton) {
+            advancedToggleButton.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+        }
+    }
+
+    function handleAdvancedChipSelection(chip) {
+        if (!chip) return;
+        const advanced = ensureAdvancedFiltersState();
+        const normalizedGroup = normalizeAdvancedGroup(chip.dataset.advancedFilter || '');
+        const value = chip.dataset.value;
+        if (!normalizedGroup || !value || !Array.isArray(advanced[normalizedGroup])) {
+            return;
+        }
+
+        const existingIndex = advanced[normalizedGroup].indexOf(value);
+        if (existingIndex > -1) {
+            advanced[normalizedGroup] = advanced[normalizedGroup].filter(item => item !== value);
+            chip.classList.remove('is-active');
+        } else {
+            advanced[normalizedGroup] = [...advanced[normalizedGroup], value];
+            chip.classList.add('is-active');
+        }
+
+        updateAdvancedIndicator();
+        currentPage = 1;
+        fetchProducts(currentPage);
+    }
+
+    function handlePalmOilToggle(isChecked) {
+        const advanced = ensureAdvancedFiltersState();
+        advanced.palmOilFree = Boolean(isChecked);
+        updateAdvancedIndicator();
+        currentPage = 1;
+        fetchProducts(currentPage);
+    }
+
+    function resetAdvancedFilters() {
+        currentFilters.advanced = createEmptyAdvancedFilters();
+        if (advancedChips && advancedChips.length) {
+            advancedChips.forEach(chip => chip.classList.remove('is-active'));
+        }
+        if (palmOilToggle) {
+            palmOilToggle.checked = false;
+        }
+        updateAdvancedIndicator();
+        currentPage = 1;
+        fetchProducts(currentPage);
+        setAdvancedPanelVisibility(false);
+    }
+
+    function applyAdvancedFiltersAndFetch() {
+        currentPage = 1;
+        fetchProducts(currentPage);
+        setAdvancedPanelVisibility(false);
+    }
+
     // Display products in grid
     function displayProducts(products) {
         productGrid.innerHTML = '';
@@ -380,16 +576,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Utiliser DocumentFragment pour affichage plus rapide
+        const fragment = document.createDocumentFragment();
+
         products.forEach(product => {
             const productName = product.product_name || 'Unknown Product';
-            const brand = product.brands || 'Unknown Brand';
+            // Search-a-licious retourne brands comme array, ancienne API comme string
+            const brand = Array.isArray(product.brands) ? product.brands.join(', ') : (product.brands || 'Unknown Brand');
             const imageUrl = product.image_front_small_url || product.image_front_url || DEFAULT_PRODUCT_IMAGE;
             const barcode = product.code || '';
 
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
             productCard.innerHTML = `
-                <img src="${imageUrl}" alt="${productName}" onerror="this.onerror=null;this.src='${DEFAULT_PRODUCT_IMAGE}';">
+                <img src="${imageUrl}" alt="${productName}" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_PRODUCT_IMAGE}';">
                 <div class="product-info">
                     <h3>${productName}</h3>
                     <p>${brand}</p>
@@ -400,8 +600,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = `product.html?code=${barcode}`;
             });
             
-            productGrid.appendChild(productCard);
+            fragment.appendChild(productCard);
         });
+
+        // Ajouter tout d'un coup pour affichage plus rapide
+        productGrid.appendChild(fragment);
     }
 
     function formatRelativeTime(timestamp) {
@@ -535,41 +738,59 @@ document.addEventListener('DOMContentLoaded', () => {
         const { signal } = liveFeedAbortController;
 
         liveFeedContainer.innerHTML = `<div class="live-feed__placeholder">${getLiveFeedMessage('loading')}</div>`;
+        const liveRequestStartedAt = performance.now();
+        setApiLiveState('live', 'pending');
 
         try {
-            const params = new URLSearchParams({
-                action: 'process',
-                search_simple: 1,
-                sort_by: 'last_modified_t',
-                sort_order: 'desc',
-                page_size: LIVE_FEED_LIMIT * 2,
-                json: 1,
-                fields: 'code,product_name,brands,image_front_small_url,last_modified_t,ingredients_text,ingredients_text_fr,ingredients_text_en,ingredients_text_es,ingredients_text_ar,categories_tags,ingredients_tags'
-            });
+            let liveFeedProducts = null;
 
-            let tagIndex = 1;
-            if (countryOverride) {
-                params.append(`tagtype_${tagIndex}`, 'countries');
-                params.append(`tag_contains_${tagIndex}`, 'contains');
-                params.append(`tag_${tagIndex}`, `en:${countryOverride}`);
-                tagIndex += 1;
+            // Essayer d'abord /api/v2/search pour le flux live (produits récents)
+            try {
+                const v2Params = new URLSearchParams({
+                    sort_by: 'last_modified_t',
+                    page_size: LIVE_FEED_LIMIT,
+                    page: 1,
+                    fields: 'code,product_name,brands,image_front_small_url,last_modified_t'
+                });
+                if (countryOverride) v2Params.append('countries_tags', `en:${countryOverride}`);
+                const v2Response = await fetch(`${CATALOGUE_API_URL}?${v2Params.toString()}`, { signal });
+                if (!v2Response.ok) throw new Error(`Live feed v2 HTTP ${v2Response.status}`);
+                const v2Data = await parseApiJsonResponse(v2Response, 'Flux live v2');
+                if (v2Data.products && v2Data.products.length > 0) {
+                    liveFeedProducts = v2Data.products;
+                    console.log('[Live feed] API v2 utilisée');
+                } else {
+                    throw new Error('v2 live feed vide');
+                }
+            } catch (v2Err) {
+                // Fallback Search-a-licious
+                console.warn('[Live feed] Bascule vers Search-a-licious:', v2Err.message);
+                const params = new URLSearchParams({
+                    sort_by: 'last_modified_t',
+                    page_size: LIVE_FEED_LIMIT,
+                    page: 1,
+                    fields: 'code,product_name,brands,image_front_small_url,last_modified_t'
+                });
+                if (countryOverride) params.append('filters', `countries_tags:en:${countryOverride}`);
+                const response = await fetch(`${SEARCH_API_URL}?${params.toString()}`, { signal });
+                if (!response.ok) throw new Error(`Live feed Search-a-licious HTTP ${response.status}`);
+                const data = await parseApiJsonResponse(response, 'Flux live fallback');
+                liveFeedProducts = data.hits || [];
             }
-            appendHalalExclusions(params, tagIndex);
 
-            const response = await fetch(`${API_URL}?${params.toString()}`, { signal });
-            if (!response.ok) {
-                throw new Error(`Live feed request failed with status ${response.status}`);
-            }
-
-            const data = await response.json();
-            recentLiveFeedProducts = filterHalalProducts(data.products || []);
+            recentLiveFeedProducts = liveFeedProducts;
             renderLiveFeed(recentLiveFeedProducts);
+            setApiLiveState('live', 'ok', {
+                duration: performance.now() - liveRequestStartedAt,
+                timestamp: Date.now()
+            });
         } catch (error) {
             if (error.name === 'AbortError') {
                 return;
             }
             console.error('Live feed loading failed', error);
             liveFeedContainer.innerHTML = `<div class="live-feed__placeholder">${getLiveFeedMessage('empty')}</div>`;
+            setApiLiveState('live', 'error', { message: error.message });
         }
     }
 
@@ -637,24 +858,126 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function goToProductFromBarcode() {
-        const rawValue = (barcodeInput?.value || '').trim();
-        if (!rawValue) {
-            barcodeInput && barcodeInput.focus();
+    const SUPPORTED_BARCODE_FORMATS = ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'];
+
+    function canUseLiveScanner() {
+        return typeof window.BarcodeDetector === 'function' && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function';
+    }
+
+    function getManualBarcodeMessage() {
+        const text = barcodeManualPrompt?.textContent?.trim();
+        return text && text.length ? text : 'Entrez un code-barres pour ouvrir la fiche produit.';
+    }
+
+    function promptManualBarcode() {
+        const manualValue = window.prompt(getManualBarcodeMessage());
+        if (manualValue) {
+            goToProductFromBarcode(manualValue);
+        }
+    }
+
+    function goToProductFromBarcode(rawValue) {
+        const normalized = (rawValue || '').replace(/\s+/g, '');
+        if (!normalized.length) {
             return;
         }
-        const normalized = rawValue.replace(/\s+/g, '');
         window.location.href = `product.html?code=${normalized}`;
     }
 
-    if (barcodeButton) {
-        barcodeButton.addEventListener('click', goToProductFromBarcode);
+    function handleBarcodeDetection(value) {
+        if (!value) return;
+        stopBarcodeScanner();
+        goToProductFromBarcode(value);
     }
 
-    if (barcodeInput) {
-        barcodeInput.addEventListener('keyup', (event) => {
-            if (event.key === 'Enter') {
-                goToProductFromBarcode();
+    function stopBarcodeScanner() {
+        barcodeScannerActive = false;
+        if (barcodeScanFrame) {
+            cancelAnimationFrame(barcodeScanFrame);
+            barcodeScanFrame = null;
+        }
+        if (barcodeStream) {
+            barcodeStream.getTracks().forEach(track => track.stop());
+            barcodeStream = null;
+        }
+        if (barcodeVideo) {
+            barcodeVideo.pause();
+            barcodeVideo.srcObject = null;
+        }
+        if (barcodeOverlay) {
+            barcodeOverlay.hidden = true;
+        }
+    }
+
+    async function scanBarcodeFrame() {
+        if (!barcodeScannerActive || !barcodeDetector) return;
+        try {
+            const barcodes = await barcodeDetector.detect(barcodeVideo);
+            if (barcodes.length) {
+                handleBarcodeDetection(barcodes[0].rawValue);
+                return;
+            }
+        } catch (error) {
+            console.warn('Barcode detection failed', error);
+        }
+        barcodeScanFrame = requestAnimationFrame(scanBarcodeFrame);
+    }
+
+    async function startBarcodeScanner() {
+        if (!barcodeOverlay || !barcodeVideo) {
+            promptManualBarcode();
+            return;
+        }
+
+        if (!canUseLiveScanner()) {
+            promptManualBarcode();
+            return;
+        }
+
+        if (!barcodeDetector) {
+            try {
+                barcodeDetector = new BarcodeDetector({ formats: SUPPORTED_BARCODE_FORMATS });
+            } catch (error) {
+                console.warn('Barcode detector initialization failed', error);
+                promptManualBarcode();
+                return;
+            }
+        }
+
+        try {
+            barcodeOverlay.hidden = false;
+            barcodeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            barcodeVideo.srcObject = barcodeStream;
+            await barcodeVideo.play();
+            barcodeScannerActive = true;
+            barcodeScanFrame = requestAnimationFrame(scanBarcodeFrame);
+        } catch (error) {
+            console.error('Unable to access camera for barcode scanning', error);
+            stopBarcodeScanner();
+            promptManualBarcode();
+        }
+    }
+
+    function handleBarcodeTrigger() {
+        if (canUseLiveScanner()) {
+            startBarcodeScanner();
+        } else {
+            promptManualBarcode();
+        }
+    }
+
+    if (barcodeButton) {
+        barcodeButton.addEventListener('click', handleBarcodeTrigger);
+    }
+
+    if (barcodeCancelButton) {
+        barcodeCancelButton.addEventListener('click', stopBarcodeScanner);
+    }
+
+    if (barcodeOverlay) {
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !barcodeOverlay.hidden) {
+                stopBarcodeScanner();
             }
         });
     }
@@ -699,16 +1022,82 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (advancedIndicator) {
+        updateAdvancedIndicator();
+    }
+
+    if (advancedToggleButton && advancedPanel) {
+        if (advancedPanel.id) {
+            advancedToggleButton.setAttribute('aria-controls', advancedPanel.id);
+        }
+        advancedToggleButton.setAttribute('aria-expanded', 'false');
+        advancedToggleButton.addEventListener('click', () => {
+            setAdvancedPanelVisibility();
+        });
+    }
+
+    if (advancedResetButton) {
+        advancedResetButton.addEventListener('click', () => {
+            resetAdvancedFilters();
+        });
+    }
+
+    if (advancedApplyButton) {
+        advancedApplyButton.addEventListener('click', () => {
+            applyAdvancedFiltersAndFetch();
+        });
+    }
+
+    if (advancedChips && advancedChips.length) {
+        advancedChips.forEach(chip => {
+            chip.addEventListener('click', () => handleAdvancedChipSelection(chip));
+        });
+    }
+
+    if (palmOilToggle) {
+        palmOilToggle.addEventListener('change', (event) => {
+            handlePalmOilToggle(event.target.checked);
+        });
+    }
+
+    if (accountPrimaryAction && accountPrimaryAction.tagName === 'BUTTON') {
+        accountPrimaryAction.addEventListener('click', handleAccountAction);
+    }
+
+    if (accountSecondaryAction && accountSecondaryAction.tagName === 'BUTTON') {
+        accountSecondaryAction.addEventListener('click', handleAccountAction);
+    }
+
+    if (accountWidget) {
+        hydrateAccountWidget();
+    }
+
+    if (apiLiveRefreshButton) {
+        apiLiveRefreshButton.addEventListener('click', () => {
+            triggerApiLiveRefresh();
+        });
+    }
+
     if (liveFeedRefresh && liveFeedContainer) {
         liveFeedRefresh.addEventListener('click', () => {
             fetchLiveFeed(currentFilters.country);
         });
     }
 
+    // FORCE GLOBAL DISPLAY BY DEFAULT - Override any localStorage/query param
+    // This must be set BEFORE first fetch to ensure worldwide products display
+    const queryCountry = new URLSearchParams(window.location.search).get('country');
+    if (!queryCountry) {
+        currentFilters.country = '';
+        localStorage.removeItem('locale_country');
+        console.log('[APP] Forced global display (no country filter)');
+    }
+
     hydrateStats(currentFilters.country);
 
     // Initial fetch
     console.log('=== STARTING INITIAL FETCH ===');
+    console.log('[APP] currentFilters.country before fetch:', currentFilters.country);
     productGrid.innerHTML = '<p style="text-align: center; padding: 3rem; font-size: 1.2rem; color: #228b22;">🔄 Chargement des produits depuis Open Food Facts...</p>';
     
     // Give the DOM a moment to render the loading message
@@ -764,6 +1153,418 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchLiveFeed(currentFilters.country);
         }
     });
+
+    const readStoredAuthIntent = () => {
+        if (typeof localStorage === 'undefined') {
+            cachedAuthIntent = null;
+            return null;
+        }
+        if (typeof cachedAuthIntent !== 'undefined') {
+            return cachedAuthIntent;
+        }
+        cachedAuthIntent = null;
+        try {
+            const rawValue = localStorage.getItem(AUTH_WELCOME_KEY);
+            if (!rawValue) {
+                return null;
+            }
+            const parsed = JSON.parse(rawValue);
+            if (parsed.portal && parsed.portal !== PORTAL_ID) {
+                return null;
+            }
+            if (parsed.timestamp && (Date.now() - parsed.timestamp) > AUTH_INTENT_TTL) {
+                localStorage.removeItem(AUTH_WELCOME_KEY);
+                return null;
+            }
+            cachedAuthIntent = parsed;
+            return parsed;
+        } catch (error) {
+            console.warn('Unable to parse stored auth intent', error);
+            try {
+                localStorage.removeItem(AUTH_WELCOME_KEY);
+            } catch (cleanupError) {
+                console.warn('Unable to cleanup auth intent', cleanupError);
+            }
+            cachedAuthIntent = null;
+            return null;
+        }
+    };
+
+    const consumeStoredAuthIntent = () => {
+        const intent = readStoredAuthIntent();
+        if (!intent) {
+            return null;
+        }
+        try {
+            localStorage.removeItem(AUTH_WELCOME_KEY);
+        } catch (error) {
+            console.warn('Unable to clear auth intent', error);
+        }
+        cachedAuthIntent = null;
+        return intent;
+    };
+
+    const hasPendingAuthIntent = () => Boolean(readStoredAuthIntent());
+
+    const clearAuthRetry = () => {
+        if (authRetryTimer) {
+            clearTimeout(authRetryTimer);
+            authRetryTimer = null;
+        }
+        authRetryAttempts = 0;
+    };
+
+    const scheduleAuthRetry = () => {
+        if (authRetryAttempts >= AUTH_RETRY_MAX) {
+            return false;
+        }
+        if (authRetryTimer) {
+            return true;
+        }
+        authRetryTimer = setTimeout(() => {
+            authRetryTimer = null;
+            authRetryAttempts += 1;
+            hydrateAccountWidget(true);
+        }, AUTH_RETRY_DELAY);
+        return true;
+    };
+
+    const buildWelcomeMessage = (intentType) => {
+        const defaultMessage = PORTAL_ID === 'beauty'
+            ? 'Merci de contribuer à Halal Open Beauty Facts.'
+            : 'Merci de contribuer à Halal Open Food Facts.';
+        if (intentType === 'signup') {
+            return PORTAL_ID === 'beauty'
+                ? 'Compte beauté créé avec succès. Bienvenue dans la communauté !'
+                : 'Compte alimentaire créé avec succès. Bienvenue dans la communauté !';
+        }
+        if (intentType === 'signin') {
+            return 'Connexion réussie. Heureux de vous revoir !';
+        }
+        return defaultMessage;
+    };
+
+    const setAccountChip = (name = '') => {
+        if (!accountChip) return;
+        const safeName = (name || '').trim();
+        if (!safeName) {
+            clearAccountChip();
+            return;
+        }
+        accountChip.hidden = false;
+        if (accountChipName) {
+            accountChipName.textContent = safeName;
+        }
+        if (accountChipAvatar) {
+            accountChipAvatar.textContent = safeName.charAt(0).toUpperCase();
+        }
+    };
+
+    const clearAccountChip = () => {
+        if (!accountChip) return;
+        accountChip.hidden = true;
+        if (accountChipName) {
+            accountChipName.textContent = '';
+        }
+        if (accountChipAvatar) {
+            accountChipAvatar.textContent = 'H';
+        }
+    };
+
+    const recordLedgerPresence = (member = {}, source = 'session') => {
+        if (!window.HalalLedger || typeof window.HalalLedger.recordMember !== 'function') {
+            return;
+        }
+        const contributorId = (member.id || member.user_id || member.login || member.username || '').toString().trim();
+        if (!contributorId) {
+            return;
+        }
+        window.HalalLedger.recordMember({
+            id: contributorId,
+            name: (member.name || member.displayName || contributorId).toString().trim(),
+            portal: PORTAL_ID,
+            country: member.country || member.countryLabel || (window.LocaleState && window.LocaleState.countryLabel) || '',
+            badges: member.badges,
+            scopes: member.scopes || [PORTAL_ID],
+            source,
+            lastSeen: member.lastSeen || Date.now(),
+            joinedAt: member.joinedAt,
+            notes: member.notes
+        });
+    };
+
+    const buildLedgerPayloadFromSession = (payload = {}) => {
+        const contributorId = payload.user_id || payload.login || '';
+        if (!contributorId) {
+            return null;
+        }
+        const createdAt = payload?.user_fields?.created_t;
+        return {
+            id: contributorId,
+            name: payload?.user_fields?.name || contributorId,
+            country: payload?.user_fields?.address_country || payload?.country || '',
+            badges: payload?.user_fields?.roles,
+            joinedAt: typeof createdAt === 'number' ? createdAt * 1000 : undefined
+        };
+    };
+
+    const showUserGreeting = (name = '') => {
+        if (!userGreeting) return;
+        const safeName = (name || '').trim();
+        if (!safeName) return;
+        userGreeting.hidden = false;
+        if (userGreetingName) {
+            userGreetingName.textContent = safeName;
+        }
+    };
+
+    const clearUserGreeting = () => {
+        if (!userGreeting) return;
+        userGreeting.hidden = true;
+        if (userGreetingName) {
+            userGreetingName.textContent = '';
+        }
+    };
+
+    const hideWelcomeBanner = () => {
+        if (!welcomeBanner) return;
+        welcomeBanner.hidden = true;
+        welcomeBanner.dataset.state = 'hidden';
+    };
+
+    const renderWelcomeBanner = (contributorName, providedIntent) => {
+        if (!welcomeBanner || !contributorName) return;
+        const intent = providedIntent || consumeStoredAuthIntent();
+        if (welcomeBanner.dataset.dismissed === 'true' && !intent) {
+            return;
+        }
+        if (welcomeTitle) {
+            welcomeTitle.textContent = `Bienvenue, ${contributorName}`;
+        }
+        if (welcomeMessage) {
+            welcomeMessage.textContent = intent?.message || buildWelcomeMessage(intent?.type);
+        }
+        if (intent?.type === 'signup') {
+            recordLedgerPresence({
+                id: intent.username || contributorName,
+                name: contributorName,
+                notes: intent.message,
+                joinedAt: intent.timestamp
+            }, 'signup');
+        }
+        showUserGreeting(contributorName);
+        welcomeBanner.hidden = false;
+        welcomeBanner.dataset.state = intent?.type || 'session';
+        if (intent) {
+            delete welcomeBanner.dataset.dismissed;
+        }
+    };
+
+    const emitSignupFallbackBanner = () => {
+        const intent = consumeStoredAuthIntent();
+        if (!intent || intent.type !== 'signup') {
+            return;
+        }
+        const fallbackName = intent.username || 'Nouveau membre Halal';
+        renderWelcomeBanner(fallbackName, intent);
+    };
+
+    if (welcomeDismiss) {
+        welcomeDismiss.addEventListener('click', () => {
+            if (!welcomeBanner) return;
+            welcomeBanner.dataset.dismissed = 'true';
+            hideWelcomeBanner();
+        });
+    }
+
+    async function hydrateAccountWidget(isRetry = false) {
+        if (!accountWidget || !SESSION_ENDPOINT) return;
+        let isActiveSession = false;
+        if (!isRetry) {
+            clearAuthRetry();
+        }
+        setAccountWidgetState('loading');
+        try {
+            const response = await fetch(SESSION_ENDPOINT, { credentials: 'include' });
+            if (!response.ok) {
+                throw new Error(`Session status ${response.status}`);
+            }
+            const data = await parseApiJsonResponse(response, 'Session');
+            const contributorId = data?.user_id || data?.login || '';
+            isActiveSession = data?.logged_in === 'yes' || Boolean(contributorId);
+            if (isActiveSession) {
+                clearAuthRetry();
+                setAccountWidgetState('signed-in', data);
+                return;
+            }
+        } catch (error) {
+            console.warn('Account widget hydration failed', error);
+        }
+
+        if (hasPendingAuthIntent()) {
+            const scheduled = scheduleAuthRetry();
+            if (!scheduled) {
+                clearAuthRetry();
+                setAccountWidgetState('signed-out');
+                emitSignupFallbackBanner();
+            }
+        } else {
+            clearAuthRetry();
+            setAccountWidgetState('signed-out');
+        }
+    }
+
+    function setAccountWidgetState(state, payload = {}) {
+        if (!accountWidget) return;
+        accountWidget.dataset.state = state;
+
+        if (state === 'loading') {
+            accountStatusLabel && (accountStatusLabel.textContent = 'Vérification en cours...');
+            accountHintLabel && (accountHintLabel.textContent = 'Connexion à Open Food Facts...');
+            setAccountAction(accountPrimaryAction, 'Chargement...', '', true);
+            setAccountAction(accountSecondaryAction, 'Créer un compte', ACCOUNT_CREATE_URL, false, '_blank');
+            hideWelcomeBanner();
+            clearUserGreeting();
+            clearAccountChip();
+            return;
+        }
+
+        if (state === 'signed-in') {
+            const contributorId = payload.user_id || payload.login || '';
+            const contributorLink = contributorId
+                ? `${CONTRIBUTOR_BASE_URL}${encodeURIComponent(contributorId)}`
+                : `${API_DOMAIN}/contributor`;
+            const displayName = contributorId || 'Session active';
+            accountStatusLabel && (accountStatusLabel.textContent = `Connecté - ${displayName}`);
+            accountHintLabel && (accountHintLabel.textContent = 'Votre session Open Food Facts est active.');
+            setAccountAction(accountPrimaryAction, 'Voir mon tableau', contributorLink, false, '_blank');
+            setAccountAction(accountSecondaryAction, 'Se déconnecter', ACCOUNT_LOGOUT_URL, false, '_blank');
+            showUserGreeting(displayName);
+            setAccountChip(displayName);
+            const ledgerPayload = buildLedgerPayloadFromSession(payload) || { id: contributorId, name: displayName };
+            recordLedgerPresence(ledgerPayload, 'session');
+            renderWelcomeBanner(displayName);
+            return;
+        }
+
+        accountStatusLabel && (accountStatusLabel.textContent = 'Espace contributeur');
+        accountHintLabel && (accountHintLabel.textContent = 'Connectez-vous avec votre compte Open Food Facts.');
+        setAccountAction(accountPrimaryAction, 'Se connecter', 'signin.html', false);
+        setAccountAction(accountSecondaryAction, 'Créer un compte', LOCAL_SIGNUP_PAGE, false);
+        hideWelcomeBanner();
+        clearUserGreeting();
+        clearAccountChip();
+    }
+
+    function setAccountAction(element, label, href, disabled = false, target = '_self') {
+        if (!element) return;
+        element.textContent = label;
+        const tagName = (element.tagName || '').toUpperCase();
+        if (tagName === 'BUTTON') {
+            element.disabled = Boolean(disabled);
+            if (href) {
+                element.dataset.href = href;
+            } else {
+                delete element.dataset.href;
+            }
+            element.dataset.target = target || '_self';
+            return;
+        }
+
+        if (href) {
+            element.setAttribute('href', href);
+        } else {
+            element.removeAttribute('href');
+        }
+        element.setAttribute('target', target || '_self');
+        if (target === '_blank') {
+            element.setAttribute('rel', 'noopener');
+        } else {
+            element.removeAttribute('rel');
+        }
+        if (disabled) {
+            element.setAttribute('aria-disabled', 'true');
+            element.classList.add('is-disabled');
+            element.tabIndex = -1;
+        } else {
+            element.removeAttribute('aria-disabled');
+            element.classList.remove('is-disabled');
+            element.tabIndex = 0;
+        }
+    }
+
+    function handleAccountAction(event) {
+        const button = event.currentTarget;
+        if (!button || button.disabled) return;
+        const destination = button.dataset.href;
+        if (!destination) return;
+        const target = button.dataset.target === '_blank' ? '_blank' : '_self';
+        if (target === '_blank') {
+            window.open(destination, '_blank', 'noopener,noreferrer');
+        } else {
+            window.location.href = destination;
+        }
+    }
+
+    function prepareApiLiveCard(source) {
+        if (!apiLiveSection) return null;
+        const element = apiLiveSection.querySelector(`[data-api-source="${source}"]`);
+        if (!element) return null;
+        return {
+            root: element,
+            latency: element.querySelector('.api-live__latency'),
+            hint: element.querySelector('.api-live__hint')
+        };
+    }
+
+    function setApiLiveState(source, state, meta = {}) {
+        const card = apiLiveCards?.[source];
+        if (!card || !card.root) return;
+        card.root.classList.remove('is-ok', 'is-error', 'is-pending');
+        card.root.classList.add(`is-${state}`);
+
+        if (state === 'pending') {
+            card.latency && (card.latency.textContent = '...');
+            card.hint && (card.hint.textContent = 'Requête en cours...');
+            return;
+        }
+
+        if (state === 'ok') {
+            card.latency && (card.latency.textContent = formatLatency(meta.duration));
+            card.hint && (card.hint.textContent = meta.timestamp
+                ? `Dernier appel à ${formatTime(meta.timestamp)}`
+                : 'Actualisé');
+            return;
+        }
+
+        if (state === 'error') {
+            card.latency && (card.latency.textContent = 'Erreur');
+            card.hint && (card.hint.textContent = meta.message || "Impossible de joindre l'API.");
+        }
+    }
+
+    function formatLatency(duration) {
+        if (typeof duration !== 'number' || Number.isNaN(duration)) {
+            return '—';
+        }
+        return `${Math.max(1, Math.round(duration))} ms`;
+    }
+
+    function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) {
+            return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        }
+        return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function triggerApiLiveRefresh() {
+        fetchProducts(currentPage || 1);
+        hydrateStats(currentFilters.country);
+        if (liveFeedContainer) {
+            fetchLiveFeed(currentFilters.country);
+        }
+    }
 
     const apkPlaceholderLink = document.getElementById('apk-download-link');
     if (apkPlaceholderLink) {
