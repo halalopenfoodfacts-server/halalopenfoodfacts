@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes listes — Halal Open Food Facts</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .lists-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .lists-page h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .lists-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .lists-tab {
+            padding: 0.45rem 1.1rem; border-radius: 999px; border: 2px solid var(--border,#e5e7eb);
+            background: #fff; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all .15s;
+        }
+        .lists-tab.active { background: var(--primary,#16a34a); color: #fff; border-color: var(--primary,#16a34a); }
+        .lists-tab-panel { display: none; }
+        .lists-tab-panel.active { display: block; }
+        .lists-empty { color: #6b7280; padding: 2rem 0; text-align: center; }
+        .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; }
+        .list-card {
+            border: 1px solid var(--border,#e5e7eb); border-radius: 12px;
+            padding: 0.85rem; background: #fff; position: relative;
+        }
+        .list-card img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; margin-bottom: 0.5rem; }
+        .list-card__name  { font-weight: 700; font-size: 0.88rem; margin: 0 0 0.2rem; }
+        .list-card__brand { font-size: 0.78rem; color: #6b7280; margin: 0 0 0.6rem; }
+        .list-card__actions { display: flex; gap: 0.4rem; }
+        .list-card__btn {
+            flex: 1; padding: 0.35rem 0; border-radius: 6px; border: 1px solid var(--border,#e5e7eb);
+            background: #fff; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: background .1s;
+        }
+        .list-card__btn:hover { background: #f3f4f6; }
+        .list-card__btn--remove { color: #b91c1c; border-color: #fca5a5; }
+        .list-export { margin-top: 1.25rem; display: flex; gap: 0.5rem; }
+        .list-clear { margin-top: 0.5rem; }
+        @media (prefers-color-scheme: dark) {
+            .list-card, .lists-tab { background: #1f2937; border-color: #374151; }
+            .list-card__btn { background: #1f2937; border-color: #374151; color: #f9fafb; }
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header site-header--secondary">
+        <div class="site-header__inner">
+            <a class="brand" href="index.html">
+                <img src="assets/images/e.png" alt="Logo" class="brand__logo" style="height:32px">
+                <div class="brand__text"><strong>Halal Open Food Facts</strong></div>
+            </a>
+            <nav class="primary-nav">
+                <a href="index.html#catalogue" class="ghost-btn">← Retour au catalogue</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="lists-page">
+        <h1>📋 Mes listes</h1>
+        <p style="color:#6b7280;margin-bottom:1.5rem">Vos produits enregistrés localement sur cet appareil.</p>
+
+        <div class="lists-tabs">
+            <button class="lists-tab active" data-tab="fav">⭐ Favoris <span id="count-fav"></span></button>
+            <button class="lists-tab" data-tab="cart">🛒 Liste de courses <span id="count-cart"></span></button>
+            <button class="lists-tab" data-tab="black">🚫 Blacklist <span id="count-black"></span></button>
+        </div>
+
+        <div id="panel-fav"   class="lists-tab-panel active"><div class="list-grid" id="grid-fav"></div></div>
+        <div id="panel-cart"  class="lists-tab-panel"><div class="list-grid" id="grid-cart"></div></div>
+        <div id="panel-black" class="lists-tab-panel"><div class="list-grid" id="grid-black"></div></div>
+
+        <div class="list-export">
+            <button id="btn-export" class="ghost-btn">📥 Exporter en JSON</button>
+            <button id="btn-clear"  class="ghost-btn" style="color:#b91c1c">🗑 Vider cette liste</button>
+        </div>
+    </main>
+
+    <script>
+    const KEYS = { fav: 'halal_fav', cart: 'halal_cart', black: 'halal_black' };
+    const DEFAULT_IMG = 'https://static.openfoodfacts.org/images/misc/product-default.png';
+    let activeTab = 'fav';
+
+    function getList(key) {
+        try { return JSON.parse(localStorage.getItem(KEYS[key]) || '[]'); } catch { return []; }
+    }
+    function saveList(key, arr) { localStorage.setItem(KEYS[key], JSON.stringify(arr)); }
+
+    function renderGrid(key) {
+        const grid = document.getElementById(`grid-${key}`);
+        const items = getList(key);
+        document.getElementById(`count-${key}`).textContent = items.length ? `(${items.length})` : '';
+        if (!items.length) {
+            grid.innerHTML = `<p class="lists-empty">Aucun produit dans cette liste.</p>`;
+            return;
+        }
+        grid.innerHTML = items.map((p, i) => `
+            <div class="list-card">
+                <img src="${p.img || DEFAULT_IMG}" alt="${p.name}" onerror="this.src='${DEFAULT_IMG}'">
+                <p class="list-card__name">${p.name || p.code}</p>
+                <p class="list-card__brand">${p.brand || ''}</p>
+                <div class="list-card__actions">
+                    <button class="list-card__btn" onclick="window.location.href='product.html?code=${p.code}'">Voir</button>
+                    <button class="list-card__btn list-card__btn--remove" onclick="removeItem('${key}',${i})">Retirer</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function removeItem(key, idx) {
+        const list = getList(key);
+        list.splice(idx, 1);
+        saveList(key, list);
+        renderGrid(key);
+    }
+
+    function renderAll() { ['fav','cart','black'].forEach(renderGrid); }
+
+    // Tabs
+    document.querySelectorAll('.lists-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            activeTab = tab.dataset.tab;
+            document.querySelectorAll('.lists-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
+            document.querySelectorAll('.lists-tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${activeTab}`));
+        });
+    });
+
+    // Export
+    document.getElementById('btn-export').addEventListener('click', () => {
+        const all = { fav: getList('fav'), cart: getList('cart'), black: getList('black') };
+        const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `halal-listes-${new Date().toISOString().slice(0,10)}.json`; a.click();
+    });
+
+    // Vider
+    document.getElementById('btn-clear').addEventListener('click', () => {
+        if (!confirm(`Vider la liste "${activeTab}" ?`)) return;
+        saveList(activeTab, []);
+        renderGrid(activeTab);
+    });
+
+    renderAll();
+    </script>
+</body>
+</html>

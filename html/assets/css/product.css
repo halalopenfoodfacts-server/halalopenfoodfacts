@@ -581,3 +581,88 @@
         padding: 1.5rem;
     }
 }
+
+/* ========== HALAL-O-MÈTRE ========== */
+.halalometer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.75rem 0 1rem;
+}
+.halalometer__bar {
+    flex: 1;
+    height: 12px;
+    background: var(--border, #e5e7eb);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.halalometer__fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.8s cubic-bezier(.4,0,.2,1);
+}
+.halalometer__fill--safe    { background: linear-gradient(90deg, #10b981, #34d399); }
+.halalometer__fill--warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.halalometer__fill--alert   { background: linear-gradient(90deg, #ef4444, #f87171); }
+.halalometer__score {
+    font-weight: 700;
+    font-size: 0.95rem;
+    min-width: 48px;
+    text-align: right;
+    color: var(--fg, #111);
+}
+
+.halal-bullet { padding-left: 0; list-style: none; margin-bottom: 0.45rem; font-size: 0.9rem; }
+.halal-bullet--safe    { color: #0f766e; }
+.halal-bullet--warning { color: #b45309; }
+.halal-bullet--alert   { color: #b91c1c; font-weight: 600; }
+.halal-bullet--info    { color: var(--muted, #6b7280); }
+
+/* ========== F3 : LISTES PERSONNELLES ========== */
+.list-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+.list-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    border: 2px solid var(--border, #e5e7eb);
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all .15s;
+    text-decoration: none;
+    color: inherit;
+}
+.list-btn:hover { background: #f3f4f6; }
+.list-btn--active { background: #d1fae5; border-color: #10b981; color: #065f46; }
+.list-btn--link { background: #f3f4f6; }
+
+.list-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #111;
+    color: #fff;
+    padding: 0.65rem 1.3rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: transform .3s ease, opacity .3s ease;
+    z-index: 9999;
+    pointer-events: none;
+}
+.list-toast--show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

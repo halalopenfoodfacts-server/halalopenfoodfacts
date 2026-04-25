@@ -886,8 +886,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleBarcodeDetection(value) {
         if (!value) return;
-        stopBarcodeScanner();
-        goToProductFromBarcode(value);
+        // Arrêter le scan mais garder l'overlay ouvert pour afficher le verdict
+        barcodeScannerActive = false;
+        if (barcodeScanFrame) { cancelAnimationFrame(barcodeScanFrame); barcodeScanFrame = null; }
+        if (barcodeStream) { barcodeStream.getTracks().forEach(t => t.stop()); barcodeStream = null; }
+        fetchAndShowScanVerdict(value);
     }
 
     function stopBarcodeScanner() {
@@ -903,10 +906,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (barcodeVideo) {
             barcodeVideo.pause();
             barcodeVideo.srcObject = null;
+            barcodeVideo.style.display = '';
         }
         if (barcodeOverlay) {
             barcodeOverlay.hidden = true;
         }
+        if (scanVerdictPanel) {
+            scanVerdictPanel.hidden = true;
+        }
+        lastScannedCode = '';
     }
 
     async function scanBarcodeFrame() {
@@ -958,16 +966,94 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    const HALAL_ALERT_KW   = ['porc','pork','bacon','lardon','jambon','alcool','alcohol','rhum','whisky','gelatine de porc','gélatine de porc','cochenille','carmine','e120'];
+    const HALAL_WARN_KW    = ['gélatine','gelatine','e441','e904','mono- et diglycérides','mono and diglycerides','glycérine','e471','vin','spirit'];
+    const HALAL_POS_LABELS = ['halal','halâl','hal-lab'];
+
+    const scanVerdictPanel  = document.getElementById('scan-verdict');
+    const scanVerdictImg    = document.getElementById('scan-verdict-img');
+    const scanVerdictName   = document.getElementById('scan-verdict-name');
+    const scanVerdictBrand  = document.getElementById('scan-verdict-brand');
+    const scanVerdictBadge  = document.getElementById('scan-verdict-badge');
+    const scanVerdictFill   = document.getElementById('scan-verdict-fill');
+    const scanVerdictMsg    = document.getElementById('scan-verdict-msg');
+    const scanVerdictGo     = document.getElementById('scan-verdict-go');
+    const scanVerdictAgain  = document.getElementById('scan-verdict-again');
+    let lastScannedCode = '';
+
+    function quickHalalCheck(text) {
+        const t = (text || '').toLowerCase();
+        const alerts   = HALAL_ALERT_KW.filter(k => t.includes(k));
+        const warnings = HALAL_WARN_KW.filter(k => t.includes(k));
+        let score = 100 - alerts.length * 35 - warnings.length * 15;
+        score = Math.max(0, Math.min(100, score));
+        const level = alerts.length ? 'alert' : warnings.length ? 'warning' : 'safe';
+        const icon  = level === 'alert' ? '🚫' : level === 'warning' ? '⚠️' : '✅';
+        const label = level === 'alert' ? 'Non halal détecté' : level === 'warning' ? 'À vérifier' : 'Halal confirmé';
+        const msg   = level === 'alert'
+            ? `Ingrédients problématiques : ${alerts.join(', ')}`
+            : level === 'warning'
+            ? `Ingrédients à confirmer : ${warnings.join(', ')}`
+            : 'Aucun ingrédient problématique détecté automatiquement.';
+        return { level, score, icon, label, msg };
+    }
+
+    async function fetchAndShowScanVerdict(code) {
+        if (!scanVerdictPanel) { goToProductFromBarcode(code); return; }
+        // Cacher la vidéo, afficher le panneau de verdict
+        if (barcodeVideo) barcodeVideo.style.display = 'none';
+        scanVerdictPanel.hidden = false;
+        scanVerdictBadge.textContent = '⏳ Analyse en cours…';
+        scanVerdictBadge.className = 'scan-verdict__badge scan-verdict__badge--loading';
+        scanVerdictFill.style.width = '0%';
+        scanVerdictMsg.textContent = '';
+        scanVerdictName.textContent = code;
+        scanVerdictBrand.textContent = '';
+        lastScannedCode = code;
+        try {
+            const res = await fetch(`/proxy/v2/product/${code}.json?fields=product_name,brands,image_front_small_url,ingredients_text,labels_tags`);
+            const data = await res.json();
+            const p = data.product || {};
+            const text = [p.ingredients_text, (p.labels_tags||[]).join(' ')].join(' ');
+            const v = quickHalalCheck(text);
+            if (p.image_front_small_url) { scanVerdictImg.src = p.image_front_small_url; scanVerdictImg.hidden = false; }
+            scanVerdictName.textContent  = p.product_name  || code;
+            scanVerdictBrand.textContent = p.brands        || '';
+            scanVerdictBadge.textContent = `${v.icon} ${v.label}`;
+            scanVerdictBadge.className   = `scan-verdict__badge scan-verdict__badge--${v.level}`;
+            scanVerdictFill.className    = `scan-verdict__fill scan-verdict__fill--${v.level}`;
+            scanVerdictFill.style.width  = `${v.score}%`;
+            scanVerdictMsg.textContent   = v.msg;
+            // Vibration haptic
+            if (navigator.vibrate) navigator.vibrate(v.level === 'alert' ? [100,50,100] : [80]);
+        } catch (_) {
+            scanVerdictBadge.textContent = '❓ Produit non trouvé';
+            scanVerdictBadge.className = 'scan-verdict__badge scan-verdict__badge--warning';
+            scanVerdictMsg.textContent = 'Impossible de récupérer les informations. Consultez la fiche complète.';
+        }
+    }
+
+    if (scanVerdictGo) {
+        scanVerdictGo.addEventListener('click', () => {
+            if (lastScannedCode) goToProductFromBarcode(lastScannedCode);
+        });
+    }
+    if (scanVerdictAgain) {
+        scanVerdictAgain.addEventListener('click', () => {
+            scanVerdictPanel.hidden = true;
+            if (barcodeVideo) barcodeVideo.style.display = '';
+            lastScannedCode = '';
+            barcodeScannerActive = true;
+            barcodeScanFrame = requestAnimationFrame(scanBarcodeFrame);
+        });
+    }
+
     function handleBarcodeTrigger() {
         if (canUseLiveScanner()) {
             startBarcodeScanner();
         } else {
             promptManualBarcode();
         }
-    }
-
-    if (barcodeButton) {
-        barcodeButton.addEventListener('click', handleBarcodeTrigger);
     }
 
     if (barcodeCancelButton) {

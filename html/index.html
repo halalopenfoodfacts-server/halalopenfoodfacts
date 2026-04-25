@@ -50,6 +50,25 @@
                         <button type="button" class="barcode-overlay__close" id="barcode-cancel" data-i18n="barcode_scan_cancel" aria-label="Fermer le scanner">Fermer</button>
                         <video id="barcode-video" class="barcode-overlay__video" autoplay playsinline muted></video>
                         <p class="barcode-overlay__helper" data-i18n="barcode_scan_helper">Cadrez le code-barres dans le cadre. La capture se lance automatiquement.</p>
+                        <!-- Verdict halal après scan -->
+                        <div id="scan-verdict" class="scan-verdict" hidden>
+                            <div class="scan-verdict__header">
+                                <img id="scan-verdict-img" class="scan-verdict__img" src="" alt="" hidden>
+                                <div>
+                                    <p id="scan-verdict-name" class="scan-verdict__name"></p>
+                                    <p id="scan-verdict-brand" class="scan-verdict__brand"></p>
+                                </div>
+                            </div>
+                            <div id="scan-verdict-badge" class="scan-verdict__badge"></div>
+                            <div class="scan-verdict__bar">
+                                <div id="scan-verdict-fill" class="scan-verdict__fill"></div>
+                            </div>
+                            <p id="scan-verdict-msg" class="scan-verdict__msg"></p>
+                            <div class="scan-verdict__actions">
+                                <button id="scan-verdict-go" class="solid-btn">Voir la fiche complète →</button>
+                                <button id="scan-verdict-again" class="ghost-btn">Scanner un autre</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="header-cta-row">

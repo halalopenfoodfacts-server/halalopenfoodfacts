@@ -233,18 +233,30 @@ document.addEventListener('DOMContentLoaded', () => {
                             <a href="add.html" class="ghost-btn">Ajouter un nouveau produit</a>
                             <button type="button" class="ghost-btn ghost-btn--dark" id="open-edit-drawer">✏️ Éditer depuis ce site</button>
                         </div>
+                        <div class="list-actions" id="list-actions" data-code="${product.code}" data-name="${(product.product_name||'').replace(/"/g,'&quot;')}" data-brand="${(product.brands||'').replace(/"/g,'&quot;')}" data-img="${product.image_front_small_url||product.image_front_url||''}">
+                            <button class="list-btn" id="btn-fav"   title="Ajouter aux favoris">  ⭐ <span>Favoris</span></button>
+                            <button class="list-btn" id="btn-cart"  title="Ajouter à ma liste de courses">🛒 <span>Courses</span></button>
+                            <button class="list-btn" id="btn-black" title="Blacklister ce produit">🚫 <span>Blacklist</span></button>
+                            <a href="my-lists.html" class="list-btn list-btn--link">📄 Mes listes</a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="product-panels">
                     <article class="product-panel product-panel--halal">
                         <div class="product-panel__header">
-                            <h2>Verdict halal</h2>
+                            <h2>Halal-o-mètre</h2>
                             <span class="status-chip status-chip--${halalVerdict.level}">${halalVerdict.icon} ${halalVerdict.title}</span>
+                        </div>
+                        <div class="halalometer">
+                            <div class="halalometer__bar">
+                                <div class="halalometer__fill halalometer__fill--${halalVerdict.level}" style="width:${halalVerdict.score}%"></div>
+                            </div>
+                            <span class="halalometer__score">${halalVerdict.score}/100</span>
                         </div>
                         <p class="product-panel__lead">${halalVerdict.message}</p>
                         <ul class="halal-bullets">
-                            ${halalVerdict.bullets.map(item => `<li>${item}</li>`).join('')}
+                            ${halalVerdict.bullets.map(b => `<li class="halal-bullet halal-bullet--${b.type}">${b.text}</li>`).join('')}
                         </ul>
                         <div class="tag-wrap">${analysisHtml}</div>
                     </article>
@@ -376,41 +388,55 @@ document.addEventListener('DOMContentLoaded', () => {
     function computeHalalVerdict(product, ctx = {}) {
         const { analysisTags, states, labels, warningKeywords, alertKeywords, positiveLabels } = ctx;
         const textBlob = buildInspectionText(product);
-        const alertMatches = findKeywords(textBlob, alertKeywords);
+        const alertMatches   = findKeywords(textBlob, alertKeywords);
         const warningMatches = findKeywords(textBlob, warningKeywords);
-        const halalLabels = renderHalalLabels(labels, positiveLabels, true);
+        const halalLabels    = renderHalalLabels(labels, positiveLabels, true);
         const hasCompletionGap = needsCompletion(states);
+        const hasCertification = halalLabels.trim().length && !halalLabels.includes('tag-pill--ghost');
+
+        // ---- Score sur 100 ----
+        let score = 100;
+        if (alertMatches.length)   score -= alertMatches.length * 35;
+        if (warningMatches.length) score -= warningMatches.length * 15;
+        if (hasCompletionGap)      score -= 10;
+        if (hasCertification)      score  = Math.min(100, score + 10);
+        score = Math.max(0, Math.min(100, score));
+
         let level = 'safe';
         let title = 'Halal confirmé';
-        let message = 'Analyse communautaire favorable pour ce produit.';
+        let message = 'Aucun ingrédient problématique détecté dans cette fiche.';
         const bullets = [];
 
         if (alertMatches.length) {
-            level = 'alert';
-            title = 'Alerte : ingrédients à risque';
-            message = `Présence possible de ${alertMatches.join(', ')}. Vérifiez l\'emballage avant consommation.`;
+            level   = 'alert';
+            title   = 'Alerte : ingrédients à risque';
+            message = `Présence détectée de : ${alertMatches.join(', ')}. Vérifiez l\'emballage avant consommation.`;
         } else if (warningMatches.length || hasCompletionGap) {
-            level = 'warning';
-            title = 'Vérification nécessaire';
+            level   = 'warning';
+            title   = 'Vérification recommandée';
             message = warningMatches.length
-                ? `Analyse automatique : ${warningMatches.join(', ')} à confirmer.`
-                : 'Cette fiche manque d\'éléments visuels. Merci de l\'améliorer.';
+                ? `Ingrédient(s) à confirmer : ${warningMatches.join(', ')}.`
+                : 'Fiche incomplète — des informations manquantes peuvent masquer des ingrédients sensibles.';
         }
 
+        // Bullets détaillés
+        if (alertMatches.length) {
+            alertMatches.forEach(m => bullets.push({ type: 'alert',   text: `🚫 ${m} — catégoriquement non halal` }));
+        }
+        if (warningMatches.length) {
+            warningMatches.forEach(m => bullets.push({ type: 'warning', text: `⚠️ ${m} — origine à vérifier` }));
+        }
         if (analysisTags && analysisTags.length) {
-            bullets.push(`Analyse ingrédients : ${asArray(analysisTags).map(cleanTag).slice(0, 4).join(', ')}`);
+            bullets.push({ type: 'info', text: `🔬 Analyse : ${asArray(analysisTags).map(cleanTag).slice(0, 4).join(', ')}` });
         }
-
-        if (halalLabels.trim().length && !halalLabels.includes('tag-pill--ghost')) {
-            bullets.push('Labels halal détectés via l\'emballage.');
+        if (hasCertification) {
+            bullets.push({ type: 'safe', text: '✅ Label halal officiel détecté sur l\'emballage' });
         }
-
         if (hasCompletionGap) {
-            bullets.push('Photos ou informations manquantes : ajoutez-les depuis l\'app pour fiabiliser le verdict.');
+            bullets.push({ type: 'warning', text: '📷 Photos ou informations manquantes — contribuez pour fiabiliser' });
         }
-
         if (!bullets.length) {
-            bullets.push('Aucune alerte automatique détectée.');
+            bullets.push({ type: 'safe', text: '✅ Aucune alerte automatique détectée' });
         }
 
         return {
@@ -418,7 +444,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title,
             message,
             bullets,
-            icon: level === 'alert' ? '⚠️' : level === 'warning' ? '⏳' : '✅'
+            score,
+            icon: level === 'alert' ? '🚫' : level === 'warning' ? '⚠️' : '✅'
         };
     }
 
@@ -1044,4 +1071,80 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
     }
+
+    // ============================================================
+    // F3 : LISTES PERSONNELLES (Favoris, Courses, Blacklist)
+    // ============================================================
+    const LIST_KEYS = { fav: 'halal_fav', cart: 'halal_cart', black: 'halal_black' };
+    const LIST_LABELS = { fav: '⭐ Favoris', cart: '🛒 Courses', black: '🚫 Blacklist' };
+
+    function getList(key) {
+        try { return JSON.parse(localStorage.getItem(LIST_KEYS[key]) || '[]'); } catch { return []; }
+    }
+    function saveList(key, arr) {
+        localStorage.setItem(LIST_KEYS[key], JSON.stringify(arr));
+    }
+    function isInList(key, code) {
+        return getList(key).some(p => p.code === code);
+    }
+    function toggleList(key, item) {
+        const list = getList(key);
+        const idx = list.findIndex(p => p.code === item.code);
+        if (idx > -1) { list.splice(idx, 1); saveList(key, list); return false; }
+        else          { list.push(item);      saveList(key, list); return true;  }
+    }
+
+    function initListButtons() {
+        const container = document.getElementById('list-actions');
+        if (!container) return;
+        const item = {
+            code:  container.dataset.code,
+            name:  container.dataset.name,
+            brand: container.dataset.brand,
+            img:   container.dataset.img,
+            date:  new Date().toISOString()
+        };
+
+        ['fav', 'cart', 'black'].forEach(key => {
+            const btn = document.getElementById(`btn-${key}`);
+            if (!btn) return;
+            const updateBtn = () => {
+                const active = isInList(key, item);
+                btn.classList.toggle('list-btn--active', active);
+                btn.title = active ? `Retirer de ${LIST_LABELS[key]}` : `Ajouter à ${LIST_LABELS[key]}`;
+            };
+            updateBtn();
+            btn.addEventListener('click', () => {
+                const added = toggleList(key, item);
+                updateBtn();
+                showListToast(added ? `Ajouté à ${LIST_LABELS[key]}` : `Retiré de ${LIST_LABELS[key]}`);
+            });
+        });
+    }
+
+    function showListToast(msg) {
+        let toast = document.getElementById('list-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'list-toast';
+            toast.className = 'list-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.classList.add('list-toast--show');
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => toast.classList.remove('list-toast--show'), 2200);
+    }
+
+    // Initialiser après displayProduct
+    const _origOpenBtn = document.getElementById('open-edit-drawer');
+    // On observe l'apparition de #list-actions (injecté par displayProduct)
+    const _listObserver = new MutationObserver(() => {
+        if (document.getElementById('list-actions')) {
+            _listObserver.disconnect();
+            initListButtons();
+        }
+    });
+    _listObserver.observe(document.getElementById('product-content') || document.body, { childList: true, subtree: true });
+
 });
