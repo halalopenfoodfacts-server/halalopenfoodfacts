@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Halal — Actualités & Guides</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .blog-page { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+        .blog-page h1 { font-size: 1.9rem; margin-bottom: 0.3rem; }
+        .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .blog-card { border: 1px solid var(--border,#e5e7eb); border-radius: 16px; overflow: hidden; background: #fff; text-decoration: none; color: inherit; display: flex; flex-direction: column; transition: box-shadow .15s; }
+        .blog-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+        .blog-card__img { width: 100%; height: 140px; object-fit: cover; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+        .blog-card__body { padding: 1rem; flex: 1; }
+        .blog-card__tag { display: inline-block; background: #d1fae5; color: #065f46; font-size: 0.73rem; font-weight: 700; border-radius: 999px; padding: 0.15rem 0.6rem; margin-bottom: 0.5rem; }
+        .blog-card__title { font-weight: 700; font-size: 1rem; margin: 0 0 0.4rem; }
+        .blog-card__excerpt { font-size: 0.85rem; color: #4b5563; line-height: 1.5; margin: 0; }
+        .blog-card__date { font-size: 0.75rem; color: #9ca3af; margin-top: 0.75rem; padding: 0 1rem 1rem; }
+        .blog-article { max-width: 700px; margin: 2rem auto; padding: 0 1rem; display: none; }
+        .blog-article.active { display: block; }
+        .blog-article h2 { font-size: 1.6rem; margin-bottom: 1rem; }
+        .blog-article p { line-height: 1.7; margin-bottom: 1rem; color: #374151; }
+        .blog-article ul { margin: 0 0 1rem 1.5rem; color: #374151; }
+        .blog-article ul li { margin-bottom: 0.4rem; line-height: 1.6; }
+        .blog-back { margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+    <header class="site-header site-header--secondary">
+        <div class="site-header__inner">
+            <a class="brand" href="index.html">
+                <img src="assets/images/e.png" alt="Logo" class="brand__logo" style="height:32px">
+                <div class="brand__text"><strong>Halal Open Food Facts</strong></div>
+            </a>
+            <nav class="primary-nav">
+                <a href="index.html#catalogue" class="ghost-btn">← Catalogue</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Liste des articles -->
+        <div class="blog-page" id="blog-list">
+            <h1>📰 Blog & Actualités Halal</h1>
+            <p style="color:#6b7280">Guides pratiques, alertes produits, et actualités de la communauté.</p>
+            <div class="blog-grid" id="blog-grid"></div>
+        </div>
+
+        <!-- Article individuel -->
+        <div class="blog-article" id="blog-article">
+            <button class="ghost-btn blog-back" onclick="showList()">← Retour au blog</button>
+            <div id="article-content"></div>
+        </div>
+    </main>
+
+    <script>
+    const ARTICLES = [
+        {
+            id: 'additifs-e',
+            tag: 'Guide',
+            icon: '🧪',
+            title: 'Les additifs E à éviter absolument en tant que musulman',
+            excerpt: 'E120, E441, E471... Découvrez les codes E qui peuvent contenir des dérivés animaux non halal.',
+            date: '15 avril 2026',
+            content: `
+                <h2>🧪 Les additifs E à surveiller</h2>
+                <p>Lire une liste d'ingrédients peut être déroutant. Voici les additifs qui méritent une attention particulière :</p>
+                <h3>🚫 Catégorie ROUGE — À éviter</h3>
+                <ul>
+                    <li><strong>E120 (Cochenille / Carmin)</strong> — colorant extrait d'insectes. Non halal selon la majorité des savants.</li>
+                    <li><strong>E441 (Gélatine)</strong> — si non spécifiée halal, peut provenir du porc.</li>
+                    <li><strong>E904 (Shellac)</strong> — résine d'insecte, statut contesté.</li>
+                    <li><strong>E422 (Glycérol)</strong> — peut être d'origine animale.</li>
+                </ul>
+                <h3>⚠️ Catégorie ORANGE — À vérifier</h3>
+                <ul>
+                    <li><strong>E471 (Mono et diglycérides d'acides gras)</strong> — peut être végétal ou animal. Demandez au fabricant.</li>
+                    <li><strong>E472 a/b/c/d/e</strong> — même problématique que E471.</li>
+                    <li><strong>E635 (Ribonucléotides)</strong> — peut contenir des dérivés de viande.</li>
+                    <li><strong>E631 / E627</strong> — inosinates/guanylates, souvent dérivés de poisson ou viande.</li>
+                </ul>
+                <h3>✅ Catégorie VERTE — Généralement OK</h3>
+                <ul>
+                    <li><strong>E100 (Curcumine)</strong> — colorant naturel du curcuma. ✅</li>
+                    <li><strong>E300 (Acide ascorbique)</strong> — vitamine C synthétique. ✅</li>
+                    <li><strong>E330 (Acide citrique)</strong> — d'origine végétale ou synthétique. ✅</li>
+                </ul>
+                <p><em>Notre Halal-o-mètre détecte automatiquement les additifs suspects sur chaque fiche produit.</em></p>
+            `
+        },
+        {
+            id: 'lire-etiquette',
+            tag: 'Guide',
+            icon: '🏷️',
+            title: 'Comment lire une étiquette alimentaire comme un expert',
+            excerpt: 'Ordre des ingrédients, allergènes, mentions optionnelles... tout ce qu\'il faut savoir.',
+            date: '10 avril 2026',
+            content: `
+                <h2>🏷️ Décrypter une étiquette alimentaire</h2>
+                <p>En Europe, la réglementation impose un certain nombre de mentions obligatoires. Voici comment les interpréter :</p>
+                <h3>📋 L'ordre des ingrédients</h3>
+                <p>Les ingrédients sont listés <strong>par ordre décroissant de poids</strong>. Le premier ingrédient est donc le plus présent dans le produit.</p>
+                <h3>⚠️ Les allergènes en gras</h3>
+                <p>Les 14 allergènes majeurs doivent être mis en évidence (gras, italique, souligné). Parmi eux : gluten, lait, œufs, poisson, crustacés, mollusques, arachides, noix, soja, sésame, moutarde, céleri, lupin, sulfites.</p>
+                <h3>🔍 Les pièges courants</h3>
+                <ul>
+                    <li><strong>"Arômes naturels"</strong> — peut inclure des extraits de viande de porc. Toujours vérifier auprès du fabricant.</li>
+                    <li><strong>"Gélatine"</strong> sans précision — potentiellement d'origine porcine.</li>
+                    <li><strong>"Présure"</strong> — coagulant qui peut être d'origine animale (veau) si non certifié halal.</li>
+                    <li><strong>"Vin" dans les sauces</strong> — même si l'alcool s'évapore à la cuisson, le produit peut rester non halal.</li>
+                </ul>
+            `
+        },
+        {
+            id: 'certifications',
+            tag: 'Certification',
+            icon: '🏅',
+            title: 'Guide des organismes de certification halal dans le monde',
+            excerpt: 'HMC, JAKIM, IFANCA, MUI... Quelles certifications sont vraiment reconnues ?',
+            date: '5 avril 2026',
+            content: `
+                <h2>🏅 Les organismes de certification halal</h2>
+                <p>Il existe des centaines d'organismes de certification halal dans le monde. Voici les plus reconnus :</p>
+                <h3>🇬🇧 HMC — Halal Monitoring Committee (Royaume-Uni)</h3>
+                <p>L'une des certifications les plus strictes au monde. Exige l'abattage sans étourdissement et des contrôles en abattoir. Très respectée par les communautés musulmanes britanniques et européennes.</p>
+                <h3>🇲🇾 JAKIM (Malaisie)</h3>
+                <p>Certification gouvernementale malaisienne. Référence mondiale pour l'Asie du Sud-Est. Reconnue dans plus de 50 pays.</p>
+                <h3>🇮🇩 MUI (Indonésie)</h3>
+                <p>Majelis Ulama Indonesia. Obligatoire pour tout produit alimentaire vendu en Indonésie depuis 2019.</p>
+                <h3>🇺🇸 IFANCA (États-Unis)</h3>
+                <p>Islamic Food and Nutrition Council of America. Très présent sur les produits importés aux USA.</p>
+                <h3>🇫🇷 AVS / ARGML (France)</h3>
+                <p>Les principaux organismes français. Leur rigueur est variable — toujours vérifier quelle mosquée valide la certification.</p>
+            `
+        },
+        {
+            id: 'voyage-halal',
+            tag: 'Voyage',
+            icon: '✈️',
+            title: 'Bien manger halal en voyage : le guide complet',
+            excerpt: 'Que ce soit en Europe, en Asie ou aux Amériques, conseils pratiques pour ne jamais manquer.',
+            date: '1er avril 2026',
+            content: `
+                <h2>✈️ Manger halal partout dans le monde</h2>
+                <p>Voyager peut être un défi pour les consommateurs halal. Voici nos conseils par région :</p>
+                <h3>🇪🇺 Europe</h3>
+                <ul>
+                    <li><strong>France, Belgique, UK</strong> : grandes surfaces avec rayons halal. Cherchez les logos HMC (UK) ou AVS (France).</li>
+                    <li><strong>Allemagne</strong> : épiceries turques (<em>Türkische Lebensmittel</em>) omniprésentes.</li>
+                    <li><strong>Scandinavie</strong> : moins répandu, préférez les supermarchés libanais ou les épiceries arabes.</li>
+                </ul>
+                <h3>🌏 Asie</h3>
+                <ul>
+                    <li><strong>Malaisie</strong> : le paradis halal. Certification JAKIM sur presque tout.</li>
+                    <li><strong>Indonésie</strong> : logo MUI obligatoire depuis 2019.</li>
+                    <li><strong>Japon</strong> : de plus en plus de restaurants et supermarchés halal dans les grandes villes.</li>
+                </ul>
+                <h3>🌍 Afrique du Nord</h3>
+                <p>Maroc, Algérie, Tunisie : la majorité des produits locaux sont halal par défaut. Attention aux produits importés d'Europe.</p>
+                <p><em>Utilisez notre Mode Voyage pour filtrer les produits disponibles dans votre destination.</em></p>
+            `
+        }
+    ];
+
+    function showList() {
+        document.getElementById('blog-list').style.display = '';
+        document.getElementById('blog-article').classList.remove('active');
+    }
+
+    function showArticle(id) {
+        const art = ARTICLES.find(a => a.id === id);
+        if (!art) return;
+        document.getElementById('article-content').innerHTML = art.content;
+        document.getElementById('blog-list').style.display = 'none';
+        document.getElementById('blog-article').classList.add('active');
+        window.scrollTo(0,0);
+    }
+
+    const grid = document.getElementById('blog-grid');
+    grid.innerHTML = ARTICLES.map(a => `
+        <a class="blog-card" href="javascript:void(0)" onclick="showArticle('${a.id}')">
+            <div class="blog-card__img">${a.icon}</div>
+            <div class="blog-card__body">
+                <span class="blog-card__tag">${a.tag}</span>
+                <p class="blog-card__title">${a.title}</p>
+                <p class="blog-card__excerpt">${a.excerpt}</p>
+            </div>
+            <div class="blog-card__date">${a.date}</div>
+        </a>
+    `).join('');
+    </script>
+</body>
+</html>

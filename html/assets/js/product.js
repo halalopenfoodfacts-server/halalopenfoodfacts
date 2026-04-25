@@ -301,6 +301,123 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         hydrateEditForm(product);
+        recordScanHistory(product);
+        injectCertifications(product);
+        injectComments(product.code);
+    }
+
+    // F9 — Certifications visuelles
+    const CERTIF_MAP = {
+        'hmc': { label: 'HMC', color: '#15803d', title: 'Halal Monitoring Committee (UK)' },
+        'jakim': { label: 'JAKIM', color: '#1d4ed8', title: 'Jabatan Kemajuan Islam Malaysia' },
+        'ifanca': { label: 'IFANCA', color: '#7c3aed', title: 'Islamic Food and Nutrition Council of America' },
+        'mui': { label: 'MUI', color: '#b45309', title: 'Majelis Ulama Indonesia' },
+        'avs': { label: 'AVS', color: '#0f766e', title: 'Assemblée des Musulmans Vegans/Végétariens (Singapour)' },
+        'argml': { label: 'ARGML', color: '#be185d', title: 'Association des Restaurateurs et Gestionnaires de Mosquée et Lieux (France)' },
+        'halal': { label: 'Halal certifié', color: '#16a34a', title: 'Certification halal générique' },
+    };
+
+    function injectCertifications(product) {
+        const labels = (product.labels_tags || []).map(l => l.toLowerCase());
+        const found = [];
+        for (const [key, info] of Object.entries(CERTIF_MAP)) {
+            if (labels.some(l => l.includes(key))) found.push(info);
+        }
+        if (!found.length) return;
+        const panel = document.querySelector('.product-panel--halal');
+        if (!panel) return;
+        const div = document.createElement('div');
+        div.className = 'certif-badges';
+        div.innerHTML = `<p class="certif-title">🏅 Certifications reconnues</p>` +
+            found.map(c => `<span class="certif-chip" style="background:${c.color}" title="${c.title}">${c.label}</span>`).join('');
+        panel.appendChild(div);
+    }
+
+    // F10 — Commentaires communautaires (localStorage)
+    function getComments(code) {
+        try { return JSON.parse(localStorage.getItem(`comments_${code}`) || '[]'); } catch { return []; }
+    }
+    function saveComments(code, arr) {
+        localStorage.setItem(`comments_${code}`, JSON.stringify(arr));
+    }
+
+    function injectComments(code) {
+        const panelsContainer = document.querySelector('.product-panels');
+        if (!panelsContainer || !code) return;
+        const comments = getComments(code);
+        const panel = document.createElement('article');
+        panel.className = 'product-panel product-panel--comments';
+        panel.id = 'comments-panel';
+        panel.innerHTML = `
+            <h2>💬 Avis de la communauté</h2>
+            <div id="comments-list">${renderCommentsList(comments)}</div>
+            <form id="comment-form" style="margin-top:1rem">
+                <div class="comment-stars" id="star-picker">
+                    ${[1,2,3,4,5].map(n => `<span class="comment-star" data-v="${n}">★</span>`).join('')}
+                </div>
+                <input type="hidden" id="comment-rating" value="0">
+                <textarea id="comment-text" placeholder="Votre avis sur ce produit halal..." rows="3" style="width:100%;padding:.6rem;border-radius:8px;border:1px solid #e5e7eb;box-sizing:border-box;resize:vertical;font-family:inherit;margin:.5rem 0"></textarea>
+                <button type="submit" class="solid-btn" style="width:100%">Publier mon avis</button>
+            </form>
+        `;
+        panelsContainer.appendChild(panel);
+
+        // Star picker
+        const stars = panel.querySelectorAll('.comment-star');
+        stars.forEach(s => {
+            s.addEventListener('mouseenter', () => highlightStars(stars, +s.dataset.v));
+            s.addEventListener('mouseleave', () => highlightStars(stars, +document.getElementById('comment-rating').value));
+            s.addEventListener('click', () => {
+                document.getElementById('comment-rating').value = s.dataset.v;
+                highlightStars(stars, +s.dataset.v);
+            });
+        });
+
+        panel.querySelector('#comment-form').addEventListener('submit', e => {
+            e.preventDefault();
+            const text = document.getElementById('comment-text').value.trim();
+            const rating = +document.getElementById('comment-rating').value;
+            if (!text || !rating) return;
+            const arr = getComments(code);
+            arr.unshift({ text, rating, date: new Date().toLocaleDateString('fr-FR') });
+            saveComments(code, arr);
+            document.getElementById('comments-list').innerHTML = renderCommentsList(arr);
+            document.getElementById('comment-text').value = '';
+            document.getElementById('comment-rating').value = 0;
+            highlightStars(stars, 0);
+        });
+    }
+
+    function highlightStars(stars, n) {
+        stars.forEach((s, i) => s.classList.toggle('active', i < n));
+    }
+
+    function renderCommentsList(comments) {
+        if (!comments.length) return '<p style="color:#9ca3af">Soyez le premier à donner votre avis !</p>';
+        return comments.map(c => `
+            <div class="comment-item">
+                <div class="comment-meta">
+                    <span class="comment-stars-display">${'★'.repeat(c.rating)}${'☆'.repeat(5-c.rating)}</span>
+                    <span style="color:#9ca3af;font-size:.8rem">${c.date}</span>
+                </div>
+                <p style="margin:.3rem 0 0">${c.text}</p>
+            </div>
+        `).join('');
+    }
+
+    // Scan history for dashboard (F5)
+    function recordScanHistory(product) {
+        try {
+            const history = JSON.parse(localStorage.getItem('halal_scan_history') || '[]');
+            history.unshift({
+                code: product.code,
+                name: product.product_name || 'Produit',
+                brand: product.brands || '',
+                img: product.image_front_small_url || product.image_front_url || '',
+                date: Date.now()
+            });
+            localStorage.setItem('halal_scan_history', JSON.stringify(history.slice(0, 100)));
+        } catch {}
     }
 
     function renderTagPills(values, fallbackText) {

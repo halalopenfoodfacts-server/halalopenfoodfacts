@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparer des produits — Halal Open Food Facts</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .compare-page { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+        .compare-page h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .compare-search-row { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .compare-search-row input { flex: 1; min-width: 200px; padding: 0.6rem 1rem; border: 2px solid var(--border,#e5e7eb); border-radius: 8px; font-size: 0.95rem; }
+        .compare-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .compare-slot {
+            border: 2px dashed var(--border,#e5e7eb); border-radius: 16px;
+            padding: 1.2rem; text-align: center; min-height: 200px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative;
+        }
+        .compare-slot.filled { border-style: solid; border-color: var(--primary,#16a34a); }
+        .compare-slot__img { width: 72px; height: 72px; object-fit: contain; border-radius: 8px; margin-bottom: 0.6rem; }
+        .compare-slot__name  { font-weight: 700; font-size: 0.95rem; margin: 0; }
+        .compare-slot__brand { font-size: 0.8rem; color: #6b7280; margin: 0.2rem 0 0.8rem; }
+        .compare-slot__remove { position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; cursor: pointer; font-size: 1rem; color: #9ca3af; }
+        .compare-slot__badge { display: inline-block; padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .badge--safe    { background: #d1fae5; color: #065f46; }
+        .badge--warning { background: #fef3c7; color: #92400e; }
+        .badge--alert   { background: #fee2e2; color: #991b1b; }
+        .compare-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .compare-table th, .compare-table td { border: 1px solid var(--border,#e5e7eb); padding: 0.6rem 0.8rem; text-align: center; }
+        .compare-table th { background: #f9fafb; font-weight: 700; }
+        .compare-table tr:nth-child(even) td { background: #f9fafb; }
+        .best { background: #d1fae5 !important; font-weight: 700; }
+        #add-product-panel { background: #fff; border: 2px solid var(--border,#e5e7eb); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; display:none; }
+        .search-results-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+        .search-results-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb; cursor: pointer; }
+        .search-results-list li:hover { background: #f3f4f6; }
+        .search-results-list img { width: 36px; height: 36px; object-fit: contain; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <header class="site-header site-header--secondary">
+        <div class="site-header__inner">
+            <a class="brand" href="index.html">
+                <img src="assets/images/e.png" alt="Logo" class="brand__logo" style="height:32px">
+                <div class="brand__text"><strong>Halal Open Food Facts</strong></div>
+            </a>
+            <nav class="primary-nav">
+                <a href="index.html#catalogue" class="ghost-btn">← Catalogue</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="compare-page">
+        <h1>🤝 Comparer des produits</h1>
+        <p style="color:#6b7280;margin-bottom:1.5rem">Ajoutez jusqu'à 3 produits pour les comparer côte à côte.</p>
+
+        <div id="add-product-panel">
+            <strong>Rechercher un produit à ajouter :</strong>
+            <div class="compare-search-row" style="margin-top:0.5rem">
+                <input type="text" id="search-input-cmp" placeholder="Nom du produit, marque...">
+                <button class="solid-btn" id="search-btn-cmp">Rechercher</button>
+            </div>
+            <ul class="search-results-list" id="search-results-cmp"></ul>
+        </div>
+
+        <div class="compare-slots" id="compare-slots"></div>
+        <button class="ghost-btn" id="btn-add-product">➕ Ajouter un produit</button>
+
+        <div id="compare-table-wrap" style="margin-top:2rem; display:none">
+            <h2 style="margin-bottom:1rem">📊 Tableau comparatif</h2>
+            <table class="compare-table" id="compare-table"></table>
+        </div>
+    </main>
+
+    <script>
+    const ALERT_KW   = ['porc','pork','bacon','alcool','alcohol','cochenille','e120','gélatine de porc'];
+    const WARNING_KW = ['gélatine','gelatine','e471','e441','glycérine','vin'];
+    const DEFAULT_IMG = 'https://static.openfoodfacts.org/images/misc/product-default.png';
+    let products = JSON.parse(localStorage.getItem('halal_compare') || '[]');
+
+    function halalScore(p) {
+        const t = [p.ingredients_text, (p.labels_tags||[]).join(' ')].join(' ').toLowerCase();
+        const a = ALERT_KW.filter(k => t.includes(k));
+        const w = WARNING_KW.filter(k => t.includes(k));
+        return Math.max(0, 100 - a.length*35 - w.length*15);
+    }
+    function halalLevel(score) { return score >= 80 ? 'safe' : score >= 50 ? 'warning' : 'alert'; }
+    function halalLabel(score) { return score >= 80 ? '✅ Halal OK' : score >= 50 ? '⚠️ À vérifier' : '🚫 Non halal'; }
+
+    function renderSlots() {
+        const container = document.getElementById('compare-slots');
+        container.innerHTML = products.map((p, i) => {
+            const score = halalScore(p);
+            const level = halalLevel(score);
+            return `
+            <div class="compare-slot filled">
+                <button class="compare-slot__remove" onclick="removeProduct(${i})" title="Retirer">✕</button>
+                <img class="compare-slot__img" src="${p.image_front_small_url||p.image_front_url||DEFAULT_IMG}" onerror="this.src='${DEFAULT_IMG}'" alt="">
+                <p class="compare-slot__name">${p.product_name||p.code}</p>
+                <p class="compare-slot__brand">${p.brands||''}</p>
+                <span class="compare-slot__badge badge--${level}">${halalLabel(score)} (${score}/100)</span>
+                <a href="product.html?code=${p.code}" style="font-size:0.8rem;color:var(--primary,#16a34a)">Voir la fiche →</a>
+            </div>`;
+        }).join('');
+        if (products.length < 3) {
+            container.innerHTML += `<div class="compare-slot" style="cursor:pointer" onclick="document.getElementById('btn-add-product').click()">
+                <span style="font-size:2rem">➕</span>
+                <p style="color:#9ca3af;font-size:0.9rem;margin-top:0.5rem">Ajouter un produit</p>
+            </div>`;
+        }
+        renderTable();
+    }
+
+    function renderTable() {
+        const wrap = document.getElementById('compare-table-wrap');
+        if (products.length < 2) { wrap.style.display = 'none'; return; }
+        wrap.style.display = '';
+        const rows = [
+            ['Halal-o-mètre', p => {
+                const s = halalScore(p);
+                return `<span class="compare-slot__badge badge--${halalLevel(s)}">${s}/100</span>`;
+            }, true],
+            ['Nutri-Score', p => (p.nutriscore_grade||'—').toUpperCase(), false],
+            ['Nova Group',  p => p.nova_group ? `Groupe ${p.nova_group}` : '—', false],
+            ['Énergie',     p => p.nutriments?.['energy-kcal_100g'] ? `${Math.round(p.nutriments['energy-kcal_100g'])} kcal` : '—', false],
+            ['Protéines',   p => p.nutriments?.proteins_100g ? `${p.nutriments.proteins_100g}g` : '—', false],
+            ['Graisses',    p => p.nutriments?.fat_100g ? `${p.nutriments.fat_100g}g` : '—', false],
+            ['Sucres',      p => p.nutriments?.sugars_100g ? `${p.nutriments.sugars_100g}g` : '—', false],
+            ['Sel',         p => p.nutriments?.salt_100g ? `${p.nutriments.salt_100g}g` : '—', false],
+        ];
+        const header = `<tr><th>Critère</th>${products.map(p=>`<th>${p.product_name||p.code}</th>`).join('')}</tr>`;
+        const body = rows.map(([label, fn]) => {
+            const vals = products.map(fn);
+            return `<tr><td><strong>${label}</strong></td>${vals.map(v=>`<td>${v}</td>`).join('')}</tr>`;
+        }).join('');
+        document.getElementById('compare-table').innerHTML = header + body;
+    }
+
+    function removeProduct(i) {
+        products.splice(i, 1);
+        save();
+        renderSlots();
+    }
+
+    function save() { localStorage.setItem('halal_compare', JSON.stringify(products)); }
+
+    document.getElementById('btn-add-product').addEventListener('click', () => {
+        const panel = document.getElementById('add-product-panel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('search-btn-cmp').addEventListener('click', async () => {
+        const q = document.getElementById('search-input-cmp').value.trim();
+        if (!q) return;
+        const res = await fetch(`/proxy/search/search?q=${encodeURIComponent(q)}&page_size=8&fields=code,product_name,brands,image_front_small_url,nutriscore_grade,nova_group,nutriments,ingredients_text,labels_tags`);
+        const data = await res.json();
+        const ul = document.getElementById('search-results-cmp');
+        ul.innerHTML = (data.hits||[]).map(p => `
+            <li onclick='addProduct(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
+                <img src="${p.image_front_small_url||DEFAULT_IMG}" onerror="this.src='${DEFAULT_IMG}'" alt="">
+                <span>${p.product_name||p.code} <small style="color:#9ca3af">${p.brands||''}</small></span>
+            </li>
+        `).join('') || '<li style="color:#9ca3af;padding:0.5rem 0">Aucun résultat</li>';
+    });
+
+    window.addProduct = function(p) {
+        if (products.length >= 3 || products.find(x => x.code === p.code)) return;
+        products.push(p);
+        save();
+        document.getElementById('add-product-panel').style.display = 'none';
+        renderSlots();
+    };
+
+    renderSlots();
+    </script>
+</body>
+</html>

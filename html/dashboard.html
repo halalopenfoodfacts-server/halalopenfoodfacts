@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Profil Halal — Halal Open Food Facts</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .dash { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .dash h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+        .dash__sub { color: #6b7280; margin-bottom: 2rem; }
+        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .dash-card {
+            background: #fff; border: 1px solid var(--border,#e5e7eb);
+            border-radius: 16px; padding: 1.2rem; text-align: center;
+        }
+        .dash-card__icon { font-size: 2.2rem; margin-bottom: 0.4rem; }
+        .dash-card__value { font-size: 2rem; font-weight: 800; color: var(--primary,#16a34a); }
+        .dash-card__label { font-size: 0.8rem; color: #6b7280; margin-top: 0.2rem; }
+        .badge-grid { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+        .badge {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.6rem 1rem; border-radius: 12px; border: 2px solid;
+            font-weight: 700; font-size: 0.9rem; opacity: 0.4;
+        }
+        .badge.earned { opacity: 1; }
+        .badge--bronze { border-color: #cd7f32; color: #cd7f32; background: #fdf5e6; }
+        .badge--silver { border-color: #9ca3af; color: #4b5563; background: #f3f4f6; }
+        .badge--gold   { border-color: #f59e0b; color: #92400e; background: #fffbeb; }
+        .history-list { list-style: none; padding: 0; margin: 0; }
+        .history-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.6rem 0; border-bottom: 1px solid var(--border,#e5e7eb);
+        }
+        .history-item img { width: 40px; height: 40px; object-fit: contain; border-radius: 6px; border: 1px solid #e5e7eb; }
+        .history-item__name { font-weight: 600; font-size: 0.88rem; }
+        .history-item__date { font-size: 0.75rem; color: #9ca3af; margin-top: 0.1rem; }
+        .history-item__link { margin-left: auto; font-size: 0.8rem; color: var(--primary,#16a34a); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <header class="site-header site-header--secondary">
+        <div class="site-header__inner">
+            <a class="brand" href="index.html">
+                <img src="assets/images/e.png" alt="Logo" class="brand__logo" style="height:32px">
+                <div class="brand__text"><strong>Halal Open Food Facts</strong></div>
+            </a>
+            <nav class="primary-nav">
+                <a href="index.html#catalogue" class="ghost-btn">← Retour</a>
+                <a href="my-lists.html" class="ghost-btn">📋 Mes listes</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="dash">
+        <h1>📊 Mon Profil Halal</h1>
+        <p class="dash__sub">Vos statistiques d'utilisation sauvegardées localement.</p>
+
+        <div class="dash-grid">
+            <div class="dash-card">
+                <div class="dash-card__icon">🔍</div>
+                <div class="dash-card__value" id="stat-scans">0</div>
+                <div class="dash-card__label">Produits consultés</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-card__icon">⭐</div>
+                <div class="dash-card__value" id="stat-fav">0</div>
+                <div class="dash-card__label">Favoris</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-card__icon">🛒</div>
+                <div class="dash-card__value" id="stat-cart">0</div>
+                <div class="dash-card__label">Liste de courses</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-card__icon">🚫</div>
+                <div class="dash-card__value" id="stat-black">0</div>
+                <div class="dash-card__label">Blacklistés</div>
+            </div>
+        </div>
+
+        <h2 style="margin-bottom:1rem">🏅 Badges</h2>
+        <div class="badge-grid">
+            <div class="badge badge--bronze" id="badge-bronze">🥉 Explorateur Bronze <small>(5 scans)</small></div>
+            <div class="badge badge--silver" id="badge-silver">🥈 Explorateur Argent <small>(25 scans)</small></div>
+            <div class="badge badge--gold"   id="badge-gold">🥇 Explorateur Or <small>(100 scans)</small></div>
+        </div>
+
+        <h2 style="margin-bottom:1rem">🕐 Historique récent</h2>
+        <ul class="history-list" id="history-list">
+            <li style="color:#6b7280;padding:1rem 0">Aucun historique pour le moment.</li>
+        </ul>
+        <button id="btn-clear-history" class="ghost-btn" style="margin-top:1rem;color:#b91c1c">🗑 Effacer l'historique</button>
+    </main>
+
+    <script>
+    const DEFAULT_IMG = 'https://static.openfoodfacts.org/images/misc/product-default.png';
+    function getList(k) { try { return JSON.parse(localStorage.getItem(k)||'[]'); } catch { return []; } }
+
+    const scans  = getList('halal_scan_history');
+    const favs   = getList('halal_fav');
+    const cart   = getList('halal_cart');
+    const blacks = getList('halal_black');
+
+    document.getElementById('stat-scans').textContent = scans.length;
+    document.getElementById('stat-fav').textContent   = favs.length;
+    document.getElementById('stat-cart').textContent  = cart.length;
+    document.getElementById('stat-black').textContent = blacks.length;
+
+    // Badges
+    if (scans.length >=   5) document.getElementById('badge-bronze').classList.add('earned');
+    if (scans.length >=  25) document.getElementById('badge-silver').classList.add('earned');
+    if (scans.length >= 100) document.getElementById('badge-gold').classList.add('earned');
+
+    // Historique
+    const list = document.getElementById('history-list');
+    if (scans.length) {
+        list.innerHTML = scans.slice(-20).reverse().map(p => `
+            <li class="history-item">
+                <img src="${p.img||DEFAULT_IMG}" onerror="this.src='${DEFAULT_IMG}'" alt="">
+                <div>
+                    <div class="history-item__name">${p.name||p.code}</div>
+                    <div class="history-item__date">${new Date(p.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}</div>
+                </div>
+                <a href="product.html?code=${p.code}" class="history-item__link">Voir →</a>
+            </li>
+        `).join('');
+    }
+
+    document.getElementById('btn-clear-history').addEventListener('click', () => {
+        if (!confirm('Effacer tout l\'historique ?')) return;
+        localStorage.removeItem('halal_scan_history');
+        location.reload();
+    });
+    </script>
+</body>
+</html>
