@@ -39,4 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = donationUrl;
         });
     }
+
+    // Ombre du header au scroll (feedback visuel de profondeur)
+    const siteHeader = document.querySelector('.site-header');
+    if (siteHeader) {
+        const onScroll = () => {
+            siteHeader.classList.toggle('is-scrolled', window.scrollY > 12);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    }
 });
