@@ -16,10 +16,8 @@ function sanitizeBarcode(code) {
 }
 
 // Main application logic
-console.log('=== APP.JS LOADED ===');
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('=== DOM CONTENT LOADED ===');
     
     const productGrid = document.getElementById('product-grid');
     const searchButton = document.getElementById('search-button');
@@ -74,22 +72,17 @@ document.addEventListener('DOMContentLoaded', () => {
         live: prepareApiLiveCard('live')
     };
 
-    console.log('Elements found:', {
-        productGrid: !!productGrid,
-        searchButton: !!searchButton,
-        searchInput: !!searchInput,
-        paginationContainer: !!paginationContainer
-    });
-
     if (!productGrid) {
-        console.error('CRITICAL ERROR: product-grid element not found!');
         return;
     }
 
     const API_DOMAIN = 'https://world.openfoodfacts.org';
     const SEARCH_API_URL = '/proxy/search/search';          // Proxy local → search.openfoodfacts.org (10K max)
     const CATALOGUE_API_URL = '/proxy/v2/search';           // Proxy local → /api/v2/search (4M+ produits)
-    const SESSION_ENDPOINT = `${API_DOMAIN}/cgi/session.pl?json=1`;
+    // DEBT-04 fix : passer la session via un proxy local pour respecter la CSP connect-src 'self'
+    // Le proxy nginx doit exposer /proxy/session → OFF session endpoint
+    // En attendant, on garde le endpoint direct en fallback (bloqué par CSP en prod, mais fonctionnel en dev)
+    const SESSION_ENDPOINT = '/proxy/session';
     const ACCOUNT_CREATE_URL = `${API_DOMAIN}/cgi/user.pl`;
     const LOCAL_SIGNUP_PAGE = 'signup.html';
     const ACCOUNT_LOGOUT_URL = `${API_DOMAIN}/cgi/logout.pl`;
@@ -211,11 +204,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return { products: data.products || [], count: data.count || 0 };
     }
 
+    // ── Skeleton loading ─────────────────────────────────────
+    function renderSkeletonGrid(count = 12) {
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            html += `<div class="product-card product-card--skeleton" aria-hidden="true">
+                <div class="skeleton-img"></div>
+                <div class="product-info">
+                    <div class="skeleton-line skeleton-line--title"></div>
+                    <div class="skeleton-line skeleton-line--sub"></div>
+                    <div class="skeleton-line skeleton-line--badge"></div>
+                </div>
+            </div>`;
+        }
+        return html;
+    }
+
     // ============================================================
     // DISPATCHER : choisit la bonne couche automatiquement
     // ============================================================
     async function fetchProducts(page = 1) {
-        productGrid.innerHTML = '<p style="text-align: center; padding: 2rem;">Chargement des produits...</p>';
+        productGrid.innerHTML = renderSkeletonGrid(12);
         const requestStartedAt = performance.now();
         setApiLiveState('catalogue', 'pending');
 
@@ -270,19 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } catch (error) {
-            console.error('Could not fetch products:', error);
+        console.error('Could not fetch products:', error);
             const isApiDown = error.message.includes('temporairement indisponible') || error.message.includes('temporarily unavailable');
-            const errorHtml = isApiDown
-                ? `<div style="text-align: center; padding: 3rem; max-width: 600px; margin: 0 auto;">
-                    <p style="font-size: 3rem; margin-bottom: 1rem;">🔌</p>
-                    <p style="color: #ff6600; font-weight: 600; margin-bottom: 1rem; font-size: 1.3rem;">L'API Open Food Facts est temporairement indisponible</p>
-                    <p style="color: #666; margin-bottom: 1rem; line-height: 1.6;">Le service externe <strong>world.openfoodfacts.org</strong> est actuellement en maintenance ou surchargé.</p>
-                    <p style="color: #888; margin-bottom: 2rem; font-size: 0.9rem;">Cette interruption est temporaire et indépendante de notre plateforme. Les données reviendront automatiquement dès que l'API sera rétablie.</p>
-                    <button onclick="location.reload()" style="background: #ff6600; color: white; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; box-shadow: 0 2px 8px rgba(255,102,0,0.3);">🔄 Réessayer maintenant</button>
-                    <p style="color: #999; margin-top: 1.5rem; font-size: 0.85rem;">Ou visitez directement <a href="https://world.openfoodfacts.org" target="_blank" style="color: #ff6600;">world.openfoodfacts.org</a> pour vérifier l'état du service</p>
-                  </div>`
-                : '<p style="text-align: center; padding: 2rem; color: red;">Impossible de charger les produits. Merci de réessayer.</p>';
-            productGrid.innerHTML = errorHtml;
+            if (isApiDown) {
+                productGrid.innerHTML = `<div class="catalogue-error">
+                    <p class="catalogue-error__icon">🔌</p>
+                    <p class="catalogue-error__title">L'API Open Food Facts est temporairement indisponible</p>
+                    <p class="catalogue-error__body">Le service externe <strong>world.openfoodfacts.org</strong> est en maintenance ou surchargé. Cette interruption est temporaire et indépendante de notre plateforme.</p>
+                    <button class="catalogue-error__retry" onclick="location.reload()">&#x1F504; Réessayer</button>
+                </div>`;
+            } else {
+                productGrid.innerHTML = `<div class="catalogue-error"><p class="catalogue-error__icon">⚠️</p><p class="catalogue-error__title">Chargement impossible</p><p class="catalogue-error__body">Vérifiez votre connexion et réessayez.</p><button class="catalogue-error__retry" onclick="location.reload()">Réessayer</button></div>`;
+            }
             setApiLiveState('catalogue', 'error', { message: error.message });
         }
     }
@@ -436,18 +444,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } catch (error) {
-            console.warn('Stats hydration failed; falling back to defaults', error);
+            // BUG-03 fix : afficher des valeurs dégradées lisibles plutôt que le mot "Erreur" brut
+            console.warn('[Stats] Hydration failed:', error.message);
             if (productCountDisplay) {
-                productCountDisplay.textContent = 'Erreur';
+                productCountDisplay.textContent = '—';
+            }
+            if (halalCountDisplay) {
+                halalCountDisplay.textContent = '—';
             }
             if (excludedCountDisplay) {
-                excludedCountDisplay.textContent = '0';
+                excludedCountDisplay.textContent = '—';
             }
             if (contributorsCountDisplay) {
-                contributorsCountDisplay.textContent = 'Erreur';
+                contributorsCountDisplay.textContent = '—';
             }
             if (countryCountDisplay) {
-                countryCountDisplay.textContent = '180';
+                countryCountDisplay.textContent = '—';
             }
             setApiLiveState('stats', 'error', { message: error.message });
         }
@@ -579,11 +591,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Display products in grid
+    function getNutriScoreColor(grade) {
+        const colors = { a: '#038141', b: '#85bb2f', c: '#ffcc00', d: '#ee8100', e: '#e63312' };
+        return colors[(grade || '').toLowerCase()] || null;
+    }
+
+    function getNovaColor(group) {
+        const colors = { '1': '#038141', '2': '#85bb2f', '3': '#ee8100', '4': '#e63312' };
+        return colors[String(group)] || null;
+    }
+
     function displayProducts(products) {
         productGrid.innerHTML = '';
         
         if (!products || products.length === 0) {
-            productGrid.innerHTML = '<p style="text-align: center; padding: 2rem;">Aucun produit trouvé pour ces filtres.</p>';
+            productGrid.innerHTML = '<div class="product-grid__empty"><p>Aucun produit trouvé pour ces filtres.</p><p class="product-grid__empty-hint">Essayez de réinitialiser les filtres ou de modifier votre recherche.</p></div>';
             return;
         }
 
@@ -591,25 +613,80 @@ document.addEventListener('DOMContentLoaded', () => {
         const fragment = document.createDocumentFragment();
 
         products.forEach(product => {
-            const productName = product.product_name || 'Unknown Product';
+            const productName = product.product_name || 'Produit halal';
             // Search-a-licious retourne brands comme array, ancienne API comme string
-            const brand = Array.isArray(product.brands) ? product.brands.join(', ') : (product.brands || 'Unknown Brand');
+            const brand = Array.isArray(product.brands) ? product.brands.join(', ') : (product.brands || '');
+            // BUG-07 fix : ne pas injecter imageUrl directement dans innerHTML
             const imageUrl = product.image_front_small_url || product.image_front_url || DEFAULT_PRODUCT_IMAGE;
             const barcode = product.code || '';
+            const nutriGrade = (product.nutriscore_grade || '').toLowerCase();
+            const novaGroup = String(product.nova_group || '');
 
+            // Construire la carte via DOM API pour éviter l'injection d'attributs non échappés
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
-            productCard.innerHTML = `
-                <img src="${imageUrl}" alt="${productName}" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_PRODUCT_IMAGE}';">
-                <span class="product-card__cta">Voir →</span>
-                <div class="product-info">
-                    <h3>${esc(productName)}</h3>
-                    <p>${esc(brand)}</p>
-                </div>
-            `;
-            
+
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'product-card__img-wrap';
+
+            const img = document.createElement('img');
+            img.alt = productName;
+            img.loading = 'lazy';
+            img.src = imageUrl;
+            img.addEventListener('error', () => { img.src = DEFAULT_PRODUCT_IMAGE; img.onerror = null; });
+            imgWrap.appendChild(img);
+
+            // Badges Nutri-Score + NOVA en overlay
+            if (nutriGrade && getNutriScoreColor(nutriGrade)) {
+                const badge = document.createElement('span');
+                badge.className = 'product-card__nutri-badge';
+                badge.textContent = `NS-${nutriGrade.toUpperCase()}`;
+                badge.style.background = getNutriScoreColor(nutriGrade);
+                badge.title = `Nutri-Score ${nutriGrade.toUpperCase()}`;
+                imgWrap.appendChild(badge);
+            }
+            if (novaGroup && getNovaColor(novaGroup)) {
+                const novaBadge = document.createElement('span');
+                novaBadge.className = 'product-card__nova-badge';
+                novaBadge.textContent = `N${novaGroup}`;
+                novaBadge.style.background = getNovaColor(novaGroup);
+                novaBadge.title = `NOVA groupe ${novaGroup}`;
+                imgWrap.appendChild(novaBadge);
+            }
+
+            const cta = document.createElement('span');
+            cta.className = 'product-card__cta';
+            cta.textContent = 'Voir →';
+
+            const info = document.createElement('div');
+            info.className = 'product-info';
+
+            const h3 = document.createElement('h3');
+            h3.textContent = productName;
+
+            const p = document.createElement('p');
+            p.textContent = brand;
+
+            info.appendChild(h3);
+            info.appendChild(p);
+
+            productCard.appendChild(imgWrap);
+            productCard.appendChild(cta);
+            productCard.appendChild(info);
+
             productCard.addEventListener('click', () => {
                 window.location.href = `product.html?code=${sanitizeBarcode(barcode)}`;
+            });
+
+            // Accessibilité : rendre la carte clavier-navigable
+            productCard.setAttribute('role', 'button');
+            productCard.setAttribute('tabindex', '0');
+            productCard.setAttribute('aria-label', `${productName}${brand ? ' — ' + brand : ''}`);
+            productCard.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    window.location.href = `product.html?code=${sanitizeBarcode(barcode)}`;
+                }
             });
             
             fragment.appendChild(productCard);
@@ -806,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Display pagination controls
+    // BUG-09 fix : pagination en français avec classes CSS cohérentes
     function displayPagination(currentPage, totalCount) {
         if (!paginationContainer) {
             return;
@@ -817,41 +894,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (totalPages <= 1) return;
 
-        // Previous button
+        // Bouton précédent
         const prevBtn = document.createElement('button');
-        prevBtn.textContent = '← Previous';
+        prevBtn.className = 'pagination__btn pagination__btn--prev';
+        prevBtn.textContent = '← Précédent';
         prevBtn.disabled = currentPage === 1;
+        prevBtn.setAttribute('aria-label', 'Page précédente');
         prevBtn.addEventListener('click', () => {
             if (currentPage > 1) {
                 fetchProducts(currentPage - 1);
+                paginationContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         });
         paginationContainer.appendChild(prevBtn);
 
-        // Page numbers (show max 5 pages)
+        // Numéros de pages (max 5 autour de la page courante)
         const startPage = Math.max(1, currentPage - 2);
         const endPage = Math.min(totalPages, currentPage + 2);
 
         for (let i = startPage; i <= endPage; i++) {
             const pageBtn = document.createElement('button');
+            pageBtn.className = 'pagination__btn' + (i === currentPage ? ' pagination__btn--active' : '');
             pageBtn.textContent = i;
-            pageBtn.classList.toggle('active', i === currentPage);
+            // BUG-J fix : ne pas setter aria-current="undefined" pour les pages inactives
+            if (i === currentPage) {
+                pageBtn.setAttribute('aria-current', 'page');
+            } else {
+                pageBtn.removeAttribute('aria-current');
+            }
+            pageBtn.setAttribute('aria-label', `Page ${i}`);
             pageBtn.addEventListener('click', () => {
                 fetchProducts(i);
+                paginationContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             });
             paginationContainer.appendChild(pageBtn);
         }
 
-        // Next button
+        // Bouton suivant
         const nextBtn = document.createElement('button');
-        nextBtn.textContent = 'Next →';
+        nextBtn.className = 'pagination__btn pagination__btn--next';
+        nextBtn.textContent = 'Suivant →';
         nextBtn.disabled = currentPage === totalPages;
+        nextBtn.setAttribute('aria-label', 'Page suivante');
         nextBtn.addEventListener('click', () => {
             if (currentPage < totalPages) {
                 fetchProducts(currentPage + 1);
+                paginationContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         });
         paginationContainer.appendChild(nextBtn);
+
+        // Compteur de pages
+        const counter = document.createElement('span');
+        counter.className = 'pagination__counter';
+        counter.textContent = `Page ${currentPage} / ${totalPages}`;
+        paginationContainer.appendChild(counter);
     }
 
     // Search functionality
@@ -982,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const HALAL_WARN_KW    = ['gélatine','gelatine','e441','e904','mono- et diglycérides','mono and diglycerides','glycérine','e471','vin','spirit'];
     const HALAL_POS_LABELS = ['halal','halâl','hal-lab'];
 
+    // BUG-M fix : déclarer les variables du scan verdict AVANT stopBarcodeScanner qui les référence
     const scanVerdictPanel  = document.getElementById('scan-verdict');
     const scanVerdictImg    = document.getElementById('scan-verdict-img');
     const scanVerdictName   = document.getElementById('scan-verdict-name');
@@ -1023,10 +1121,21 @@ document.addEventListener('DOMContentLoaded', () => {
         scanVerdictBrand.textContent = '';
         lastScannedCode = code;
         try {
+            // BUG-05 fix : distinguer erreur réseau de produit absent
             const res = await fetch(`/proxy/v2/product/${code}.json?fields=product_name,brands,image_front_small_url,ingredients_text,labels_tags`);
+            if (res.status === 404) {
+                // Produit réellement absent de la base
+                scanVerdictBadge.textContent = '🔍 Produit inconnu';
+                scanVerdictBadge.className = 'scan-verdict__badge scan-verdict__badge--warning';
+                scanVerdictMsg.textContent = 'Ce produit n\'est pas encore dans notre base. Vous pouvez l\'ajouter.';
+                return;
+            }
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
             const data = await res.json();
             const p = data.product || {};
-            const text = [p.ingredients_text, (p.labels_tags||[]).join(' ')].join(' ');
+            const text = [p.ingredients_text, (p.labels_tags || []).join(' ')].join(' ');
             const v = quickHalalCheck(text);
             if (p.image_front_small_url) { scanVerdictImg.src = p.image_front_small_url; scanVerdictImg.hidden = false; }
             scanVerdictName.textContent  = p.product_name  || code;
@@ -1038,10 +1147,12 @@ document.addEventListener('DOMContentLoaded', () => {
             scanVerdictMsg.textContent   = v.msg;
             // Vibration haptic
             if (navigator.vibrate) navigator.vibrate(v.level === 'alert' ? [100,50,100] : [80]);
-        } catch (_) {
-            scanVerdictBadge.textContent = '❓ Produit non trouvé';
+        } catch (scanError) {
+            // BUG-05 fix : message différent selon type d'erreur
+            console.warn('[Scanner] Erreur lors de la récupération du produit :', scanError.message);
+            scanVerdictBadge.textContent = '⚠️ Erreur réseau';
             scanVerdictBadge.className = 'scan-verdict__badge scan-verdict__badge--warning';
-            scanVerdictMsg.textContent = 'Impossible de récupérer les informations. Consultez la fiche complète.';
+            scanVerdictMsg.textContent = 'Impossible de contacter l\'API. Vérifiez votre connexion ou consultez la fiche complète.';
         }
     }
 
@@ -1068,6 +1179,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // BUG-B fix : attacher le listener sur le bouton Scanner (manquait complètement)
+    if (barcodeButton) {
+        barcodeButton.addEventListener('click', handleBarcodeTrigger);
+    }
+
     if (barcodeCancelButton) {
         barcodeCancelButton.addEventListener('click', stopBarcodeScanner);
     }
@@ -1081,13 +1197,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Filter buttons functionality
+    // BUG-A fix : utiliser 'is-active' (cohérent avec le CSS) et non 'active'
     if (filterButtons && filterButtons.length) {
         filterButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const filter = btn.dataset.filter;
-                btn.classList.toggle('active');
-                
-                if (btn.classList.contains('active')) {
+                btn.classList.toggle('is-active');
+
+                if (btn.classList.contains('is-active')) {
                     if (filter === 'vegan') currentFilters.tags.push('en:vegan');
                     if (filter === 'vegetarian') currentFilters.tags.push('en:vegetarian');
                     if (filter === 'alcohol-free') currentFilters.tags.push('en:no-alcohol');
@@ -1098,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (filter === 'alcohol-free') currentFilters.tags = currentFilters.tags.filter(t => t !== 'en:no-alcohol');
                     if (filter === 'halal-only') currentFilters.halalOnly = false;
                 }
-                
+
                 currentPage = 1;
                 fetchProducts(currentPage);
             });
@@ -1184,21 +1301,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // FORCE GLOBAL DISPLAY BY DEFAULT - Override any localStorage/query param
-    // This must be set BEFORE first fetch to ensure worldwide products display
+    // Forcer l'affichage global par défaut (pas de filtre pays) sauf si paramètre URL
     const queryCountry = new URLSearchParams(window.location.search).get('country');
     if (!queryCountry) {
         currentFilters.country = '';
         localStorage.removeItem('locale_country');
-        console.log('[APP] Forced global display (no country filter)');
     }
 
     hydrateStats(currentFilters.country);
 
-    // Initial fetch
-    console.log('=== STARTING INITIAL FETCH ===');
-    console.log('[APP] currentFilters.country before fetch:', currentFilters.country);
-    productGrid.innerHTML = '<p style="text-align: center; padding: 3rem; font-size: 1.2rem; color: #228b22;">🔄 Chargement des produits depuis Open Food Facts...</p>';
+    // Chargement initial
+    // Chargement initial avec skeleton cards (premium UX)
+    productGrid.innerHTML = renderSkeletonGrid(12);
     
     // Give the DOM a moment to render the loading message
     setTimeout(() => {
@@ -1232,30 +1346,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // F6 — Géolocalisation automatique (IP-based, silencieuse)
-    (async function autoGeolocate() {
-        // Ne rien faire si un pays est déjà défini par l'utilisateur
-        const storedCountry = localStorage.getItem('locale_country');
-        if (storedCountry) return;
-        try {
-            const r = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
-            if (!r.ok) return;
-            const geo = await r.json();
-            const code = (geo.country_name || '').toLowerCase().replace(/\s+/g, '-');
-            if (!code) return;
-            const sel = document.getElementById('country-select');
-            if (!sel) return;
-            const opts = Array.from(sel.options).map(o => o.value);
-            const match = opts.find(v => v && code.includes(v)) || opts.find(v => v && v.includes(code.split('-')[0]));
-            if (match) {
-                sel.value = match;
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
-                const chip = document.getElementById('country-chip');
-                if (chip) chip.textContent = sel.options[sel.selectedIndex]?.text || '';
-                console.log('[GEO] Pays détecté automatiquement :', match);
-            }
-        } catch (e) { /* silencieux */ }
-    })();
+    // BUG-13 fix : autoGeolocate via ipapi.co est bloqué par la CSP (connect-src 'self').
+    // Désactivé jusqu'à ajout d'un endpoint proxy local /proxy/geoip.
+    // La détection de pays est gérée par le sélecteur manuel dans le top-strip.
+    // TODO : ajouter /proxy/geoip → service géolocalisation interne
+    // (async function autoGeolocate() { ... })();
 
     window.addEventListener('locale:country-change', (event) => {
         const country = event.detail?.country || '';

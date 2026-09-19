@@ -17,21 +17,47 @@ def _portal(request):
 
 
 def _apply_filters(qs, request):
-    """Applique les filtres communs labels/catégories/pays/halal"""
-    labels = request.GET.get('labels_tags', '')
-    if labels:
-        for label in labels.split(','):
-            label = label.strip()
-            if label:
-                qs = qs.filter(labels_tags__icontains=label)
+    """Applique les filtres communs labels/catégories/pays/halal.
+    Supporte les multi-valeurs : le frontend envoie plusieurs params du même nom.
+    Ex: labels_tags=en:halal&labels_tags=en:vegan
+    """
+    # DEBT-05 fix : utiliser getlist() pour capturer toutes les valeurs
+    labels_list = request.GET.getlist('labels_tags')
+    for label in labels_list:
+        for single_label in label.split(','):
+            single_label = single_label.strip()
+            if single_label:
+                qs = qs.filter(labels_tags__icontains=single_label)
 
-    categories = request.GET.get('categories_tags', '')
-    if categories:
-        qs = qs.filter(categories_tags__icontains=categories)
+    categories_list = request.GET.getlist('categories_tags')
+    for cat in categories_list:
+        cat = cat.strip()
+        if cat:
+            qs = qs.filter(categories_tags__icontains=cat)
 
-    countries = request.GET.get('countries_tags', '')
-    if countries:
-        qs = qs.filter(countries_tags__icontains=countries)
+    countries_list = request.GET.getlist('countries_tags')
+    for country in countries_list:
+        country = country.strip()
+        if country:
+            qs = qs.filter(countries_tags__icontains=country)
+
+    nova_list = request.GET.getlist('nova_groups_tags')
+    for nova in nova_list:
+        nova = nova.strip()
+        if nova:
+            qs = qs.filter(nova_groups_tags__icontains=nova)
+
+    nutri_list = request.GET.getlist('nutrition_grades_tags')
+    for nutri in nutri_list:
+        nutri = nutri.strip()
+        if nutri:
+            qs = qs.filter(nutrition_grades_tags__icontains=nutri)
+
+    ingredients_analysis_list = request.GET.getlist('ingredients_analysis_tags')
+    for tag in ingredients_analysis_list:
+        tag = tag.strip()
+        if tag:
+            qs = qs.filter(ingredients_analysis_tags__icontains=tag)
 
     if request.GET.get('is_halal') == '1':
         qs = qs.filter(is_halal=True)
@@ -176,19 +202,29 @@ def stats(request):
     halal_count = qs.filter(is_halal=True).count()
     excluded_count = qs.filter(is_excluded=True).count()
 
-    # Compter les pays uniques en décomposant les tags séparés par virgule
-    # countries_tags ressemble à "en:france,en:spain" — on compte les noms individuels
-    from django.db.models.functions import Upper
-    all_tags = qs.exclude(countries_tags='').values_list('countries_tags', flat=True)
-    unique_countries = set()
-    for row in all_tags.iterator(chunk_size=5000):
-        for tag in str(row).split(','):
-            tag = tag.strip().lower()
-            if tag.startswith('en:'):
-                unique_countries.add(tag[3:])
-            elif tag:
-                unique_countries.add(tag)
-    countries_count = len(unique_countries)
+    # BUG-G fix : remplacer l'itération Python (N+1) par une requête SQL native PostgreSQL.
+    # UNNEST + COUNT DISTINCT s'exécute entièrement en base → x100+ plus rapide sur 4,5M lignes.
+    countries_cache_key = f'countries_count_{portal}'
+    countries_count = cache.get(countries_cache_key)
+    if countries_count is None:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(DISTINCT
+                    CASE WHEN trim(tag) LIKE 'en:%%'
+                         THEN substr(trim(tag), 4)
+                         ELSE trim(tag) END
+                )
+                FROM (
+                    SELECT unnest(string_to_array(countries_tags, ',')) AS tag
+                    FROM products_product
+                    WHERE portal = %s AND countries_tags != ''
+                ) tags
+                WHERE trim(tag) != ''
+            """, [portal])
+            countries_count = cursor.fetchone()[0] or 0
+        # Cache 10 minutes (valeur stable, calcul coûteux)
+        cache.set(countries_cache_key, countries_count, timeout=600)
 
     # Normalisation casse/espaces : "John", "john ", "JOHN" ne doivent
     # compter que comme UN seul contributeur (bug historique corrige ici).

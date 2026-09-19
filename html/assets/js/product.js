@@ -43,7 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const HALAL_POSITIVE_LABELS = ['halal', 'halâl', 'hal-lab'];
     const numberFormatter = new Intl.NumberFormat('fr-FR');
     const OFF_EDIT_ENDPOINT = 'https://world.openfoodfacts.org/cgi/product_jqm2.pl';
-    const OFF_SESSION_ENDPOINT = 'https://world.openfoodfacts.org/cgi/session.pl?json=1';
+    // DT-06 fix : utiliser le proxy local au lieu de l'endpoint externe (bloqué par CSP en prod)
+    const OFF_SESSION_ENDPOINT = '/proxy/session';
     const OFF_IMAGE_ENDPOINT = 'https://world.openfoodfacts.org/cgi/product_image_upload.pl';
     const API_KEY_STORAGE_KEY = 'hoff_edit_api_key';
     let currentProductData = null;
@@ -106,6 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function parseApiJsonResponse(response, contextLabel = 'API request') {
         const rawText = await response.text();
+        // BUG-H fix : détecter les réponses HTML (page d'erreur proxy avec HTTP 200)
+        if (rawText.includes('<!DOCTYPE html>') || rawText.includes('<html')) {
+            throw new Error(`${contextLabel}: L'API est temporairement indisponible. Veuillez réessayer.`);
+        }
         try {
             return JSON.parse(rawText);
         } catch (error) {
@@ -116,28 +121,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchProductDetails(code) {
         try {
-            // Essayer d'abord notre backend local (données locales + images)
             const localResponse = await fetch(`/proxy/v2/product/${sanitizeBarcode(code)}.json`);
-            if (localResponse.ok) {
-                const localData = await parseApiJsonResponse(localResponse, 'Fiche produit locale');
-                if (localData.product) {
-                    displayProduct(localData.product);
-                    return;
-                }
+
+            // BUG-F fix : gérer explicitement chaque cas HTTP pour éviter
+            // d'écraser un rendu réussi avec un message d'erreur trompeur.
+            if (localResponse.status === 404) {
+                productContent.innerHTML = `<p class="product-empty">Ce produit n'est pas encore dans notre base de données. Vous pouvez le retrouver sur <a href="https://world.openfoodfacts.org/product/${sanitizeBarcode(code)}" target="_blank">Open Food Facts</a>.</p>`;
+                return;
             }
-            // Produit absent de notre base locale
-            productContent.innerHTML = '<p class="product-empty">Ce produit n\'est pas encore dans notre base de données. Vous pouvez le retrouver sur <a href="https://world.openfoodfacts.org/product/' + code + '" target="_blank">Open Food Facts</a>.</p>';
+            if (!localResponse.ok) {
+                throw new Error(`HTTP ${localResponse.status}`);
+            }
+
+            const localData = await parseApiJsonResponse(localResponse, 'Fiche produit locale');
+
+            if (localData && localData.product) {
+                displayProduct(localData.product);
+                return;
+            }
+
+            // HTTP 200 mais champ 'product' absent — erreur inattendue de l'API
+            throw new Error('Réponse API invalide : champ product manquant dans la réponse');
+
         } catch (error) {
             console.error('Error fetching product:', error);
-            productContent.innerHTML = '<p class="product-empty">Erreur réseau lors du chargement de la fiche produit.</p>';
+            productContent.innerHTML = '<p class="product-empty">Erreur lors du chargement de la fiche produit. Vérifiez votre connexion et réessayez.</p>';
         }
     }
 
     function displayProduct(product) {
+        // BUG-D fix : appliquer esc() sur toutes les valeurs injectables pour éviter les XSS
         const imageUrl = product.image_front_url || product.image_url || 'https://static.openfoodfacts.org/images/misc/product-default.png';
-        const productName = product.product_name || 'Produit halal à compléter';
-        const brand = product.brands || 'Marque à confirmer';
-        const quantity = product.quantity || product.serving_quantity || '';
+        const productName = esc(product.product_name || 'Produit halal à compléter');
+        const brand = esc(product.brands || 'Marque à confirmer');
+        const quantity = esc(product.quantity || product.serving_quantity || '');
         const categories = formatList(product.categories_tags, product.categories || 'Non renseigné');
         const countriesHtml = renderTagPills(product.countries_tags, product.countries || 'Aucun pays indiqué');
         const labelsHtml = renderTagPills(product.labels_tags, 'Aucun label confirmé');
@@ -147,7 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const traces = formatList(product.traces_tags, product.traces || 'Non renseigné');
         const ingredients = formatMultiline(product.ingredients_text_fr || product.ingredients_text || 'Ajoutez la liste d\'ingrédients détaillée pour aider la communauté.');
         const barcodeImage = null; // rendu via canvas après affichage
-        const editUrl = product.code ? `https://world.openfoodfacts.org/product/${product.code}` : 'https://world.openfoodfacts.org';
+        // Le code-barres est sanitizé, editUrl construit depuis celui-ci est donc sûr
+        const safeCode = sanitizeBarcode(product.code || '');
+        const editUrl = safeCode ? `https://world.openfoodfacts.org/product/${safeCode}` : 'https://world.openfoodfacts.org';
         const nutriments = product.nutriments || {};
         const energyKcal = getEnergyValue(nutriments);
         const nutriScoreGrade = (product.nutriscore_grade || '').toUpperCase();
@@ -221,8 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="product-meta-grid">
                             <article>
                                 <span class="meta-label">Code-barres</span>
-                                <strong>${product.code || '—'}</strong>
-                                ${product.code ? `<svg id="barcode-svg" class="barcode-visual"></svg>` : ''}
+                                <strong>${safeCode || '—'}</strong>
+                                ${safeCode ? `<svg id="barcode-svg" class="barcode-visual"></svg>` : ''}
                             </article>
                             <article>
                                 <span class="meta-label">Catégories</span>
@@ -250,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <a href="add.html" class="ghost-btn">Ajouter un nouveau produit</a>
                             <button type="button" class="ghost-btn ghost-btn--dark" id="open-edit-drawer">✏️ Éditer depuis ce site</button>
                         </div>
-                        <div class="list-actions" id="list-actions" data-code="${product.code}" data-name="${(product.product_name||'').replace(/"/g,'&quot;')}" data-brand="${(product.brands||'').replace(/"/g,'&quot;')}" data-img="${product.image_front_small_url||product.image_front_url||''}">
+                        <div class="list-actions" id="list-actions" data-code="${safeCode}" data-name="${(product.product_name||'').replace(/"/g,'&quot;')}" data-brand="${(product.brands||'').replace(/"/g,'&quot;')}" data-img="${product.image_front_small_url||product.image_front_url||''}">
                             <button class="list-btn" id="btn-fav"   title="Ajouter aux favoris">  ⭐ <span>Favoris</span></button>
                             <button class="list-btn" id="btn-cart"  title="Ajouter à ma liste de courses">🛒 <span>Courses</span></button>
                             <button class="list-btn" id="btn-black" title="Blacklister ce produit">🚫 <span>Blacklist</span></button>
@@ -420,16 +439,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCommentsList(comments) {
-        if (!comments.length) return '<p style="color:#9ca3af">Soyez le premier à donner votre avis !</p>';
-        return comments.map(c => `
+        if (!comments.length) return '<p class="comments-empty">Soyez le premier à donner votre avis !</p>';
+        return comments.map(c => {
+            // BUG-08 fix : échapper le contenu utilisateur avant injection HTML
+            const safeText = esc(String(c.text || ''));
+            const safeDate = esc(String(c.date || ''));
+            const rating = Math.min(5, Math.max(0, parseInt(c.rating, 10) || 0));
+            return `
             <div class="comment-item">
                 <div class="comment-meta">
-                    <span class="comment-stars-display">${'★'.repeat(c.rating)}${'☆'.repeat(5-c.rating)}</span>
-                    <span style="color:#9ca3af;font-size:.8rem">${c.date}</span>
+                    <span class="comment-stars-display" aria-label="${rating} étoiles sur 5">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</span>
+                    <span class="comment-date">${safeDate}</span>
                 </div>
-                <p style="margin:.3rem 0 0">${c.text}</p>
+                <p class="comment-text">${safeText}</p>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     // Scan history for dashboard (F5)
@@ -484,7 +509,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!text) {
             return '<em>Information à compléter.</em>';
         }
-        return text.replace(/\n/g, '<br>');
+        // Échapper d'abord pour éviter l'injection HTML, puis restaurer les sauts de ligne
+        return esc(text).replace(/\n/g, '<br>');
     }
 
     function needsCompletion(states = []) {
@@ -857,7 +883,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         }
         if (response.ok) {
-            updateEditStatus(payload?.status_verbose || 'La plateforme n’a pas accepté cette mise à jour.', true);
+            // Payload reçu mais non reconnu comme succès — on log pour aider au diagnostic
+            console.warn('[EditForm] Réponse HTTP OK mais payload non reconnu :', payload, 'texte brut :', payloadText.slice(0, 200));
+            const verboseMsg = payload?.status_verbose || '';
+            updateEditStatus(
+                verboseMsg
+                    ? `Réponse inattendue de l'API : ${verboseMsg}`
+                    : "L'API n'a pas confirmé la mise à jour. Vérifiez vos identifiants.",
+                true
+            );
             return false;
         }
         throw new Error(`HTTP ${response.status}`);
@@ -867,12 +901,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!payload) {
             return false;
         }
+        // status numérique 1 ou chaîne "status ok"
         if (payload.status === 'status ok' || payload.status === 1) {
             return true;
         }
-        if (payload.status_verbose && payload.status_verbose.toLowerCase().includes('success')) {
+        // OFF retourne parfois des variantes non normalisées
+        const verbose = (payload.status_verbose || '').toLowerCase();
+        const positiveTerms = ['success', 'saved', 'updated', 'added', 'modified', 'ok'];
+        if (verbose && positiveTerms.some(term => verbose.includes(term))) {
             return true;
         }
+        // Certaines versions de l'API retournent juste un code numérique dans un champ différent
+        if (payload.result && (payload.result === 'success' || payload.result === 1)) {
+            return true;
+        }
+        console.warn('[EditForm] Réponse OFF non reconnue comme succès :', payload);
         return false;
     }
 
