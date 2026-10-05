@@ -66,9 +66,15 @@
             credentials = 'same-origin'
         } = options;
         const url = new URL(path, window.location.origin);
-        if (query) {
+        if (query instanceof URLSearchParams) {
+            query.forEach((value, key) => {
+                if (value !== '') url.searchParams.append(key, value);
+            });
+        } else if (query) {
             Object.entries(query).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && value !== '') {
+                if (Array.isArray(value)) {
+                    value.forEach(item => url.searchParams.append(key, String(item)));
+                } else if (value !== undefined && value !== null && value !== '') {
                     url.searchParams.set(key, String(value));
                 }
             });

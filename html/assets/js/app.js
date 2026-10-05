@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (filters.length > 0) params.append('filters', filters.join(' AND '));
 
-        const data = await api.search(Object.fromEntries(params.entries()));
+        const data = await api.search(params);
         // Normaliser au format commun { products, count }
         return { products: data.hits || [], count: data.count || 0 };
     }
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (advanced.palmOilFree) params.append('ingredients_analysis_tags', 'en:palm-oil-free');
         }
 
-        const data = await api.catalogue(Object.fromEntries(params.entries()));
+        const data = await api.catalogue(params);
         // v2 retourne { products, count }
         return { products: data.products || [], count: data.count || 0 };
     }
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentFilters.category) filters.push(`categories_tags:${currentFilters.category}`);
                     if (currentFilters.country)  filters.push(`countries_tags:en:${currentFilters.country}`);
                     if (filters.length > 0) params.append('filters', filters.join(' AND '));
-                    const fbData = await api.search(Object.fromEntries(params.entries()));
+                    const fbData = await api.search(params);
                     result = { products: fbData.hits || [], count: fbData.count || 0 };
                 }
             }
@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     fields: 'code,product_name,brands,image_front_small_url,last_modified_t'
                 });
                 if (countryOverride) v2Params.append('countries_tags', `en:${countryOverride}`);
-                const v2Data = await api.catalogue(Object.fromEntries(v2Params.entries()), { signal });
+                const v2Data = await api.catalogue(v2Params, { signal });
                 if (v2Data.products && v2Data.products.length > 0) {
                     liveFeedProducts = v2Data.products;
                     console.log('[Live feed] API v2 utilisée');
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     fields: 'code,product_name,brands,image_front_small_url,last_modified_t'
                 });
                 if (countryOverride) params.append('filters', `countries_tags:en:${countryOverride}`);
-                const data = await api.search(Object.fromEntries(params.entries()), { signal });
+                const data = await api.search(params, { signal });
                 liveFeedProducts = data.hits || [];
             }
 
