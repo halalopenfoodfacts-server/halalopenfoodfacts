@@ -16,6 +16,12 @@ function sanitizeBarcode(code) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const api = window.HalalApiClient;
+    if (!api) {
+        console.error('[PRODUCT] HalalApiClient is not available');
+        return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const barcode = urlParams.get('code');
     const productContent = document.getElementById('product-content');
@@ -105,43 +111,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchProductDetails(barcode);
 
-    async function parseApiJsonResponse(response, contextLabel = 'API request') {
-        const rawText = await response.text();
-        // BUG-H fix : détecter les réponses HTML (page d'erreur proxy avec HTTP 200)
-        if (rawText.includes('<!DOCTYPE html>') || rawText.includes('<html')) {
-            throw new Error(`${contextLabel}: L'API est temporairement indisponible. Veuillez réessayer.`);
-        }
-        try {
-            return JSON.parse(rawText);
-        } catch (error) {
-            const snippet = rawText.slice(0, 140).replace(/\s+/g, ' ').trim();
-            throw new Error(`${contextLabel}: réponse JSON invalide (${response.status}) ${snippet}`);
-        }
-    }
-
     async function fetchProductDetails(code) {
         try {
-            const localResponse = await fetch(`/proxy/v2/product/${sanitizeBarcode(code)}.json`);
-
-            // BUG-F fix : gérer explicitement chaque cas HTTP pour éviter
-            // d'écraser un rendu réussi avec un message d'erreur trompeur.
-            if (localResponse.status === 404) {
-                productContent.innerHTML = `<p class="product-empty">Ce produit n'est pas encore dans notre base de données. Vous pouvez le retrouver sur <a href="https://world.openfoodfacts.org/product/${sanitizeBarcode(code)}" target="_blank">Open Food Facts</a>.</p>`;
-                return;
-            }
-            if (!localResponse.ok) {
-                throw new Error(`HTTP ${localResponse.status}`);
-            }
-
-            const localData = await parseApiJsonResponse(localResponse, 'Fiche produit locale');
-
-            if (localData && localData.product) {
-                displayProduct(localData.product);
-                return;
+            let localData;
+            try {
+                localData = await api.product(sanitizeBarcode(code));
+            } catch (error) {
+                if (error?.kind === 'not-found') {
+                    productContent.innerHTML = `<p class="product-empty">Ce produit n'est pas encore dans notre base de données. Vous pouvez le retrouver sur <a href="https://world.openfoodfacts.org/product/${sanitizeBarcode(code)}" target="_blank" rel="noopener">Open Food Facts</a>.</p>`;
+                    return;
+                }
+                throw error;
             }
 
-            // HTTP 200 mais champ 'product' absent — erreur inattendue de l'API
-            throw new Error('Réponse API invalide : champ product manquant dans la réponse');
+            if (!localData || !localData.product) {
+                throw new Error('Invalid product response');
+            }
+
+            displayProduct(localData.product);
 
         } catch (error) {
             console.error('Error fetching product:', error);
