@@ -106,8 +106,11 @@ button, select { cursor: pointer; }
 .brand__text small, .brand__baseline { color: var(--ink-soft); font-size: .75rem; }
 .header-controls { display: flex; flex: 1; flex-wrap: wrap; justify-content: flex-end; gap: .8rem; }
 .primary-nav, .header-cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; }
-.nav-toggle { display: none; border: 1px solid var(--line); border-radius: var(--radius); padding: .55rem; color: var(--ink); background: var(--paper-raised); }
+.nav-toggle, .theme-toggle { border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); background: var(--paper-raised); }
+.nav-toggle { display: none; padding: .55rem; }
 .nav-toggle span { display: block; width: 1.2rem; height: 2px; margin: 3px; background: currentColor; }
+.theme-toggle { min-width: 2.5rem; min-height: 2.5rem; padding: .45rem; font-size: 1rem; }
+.theme-toggle:hover { border-color: var(--sauge); background: var(--sauge-light); }
 
 .mega-search { display: flex; flex: 1 1 24rem; align-items: center; gap: .5rem; padding: .4rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper-raised); }
 .mega-search__field { display: flex; flex: 1; align-items: center; gap: .5rem; min-width: 10rem; }
@@ -195,8 +198,10 @@ main { width: min(100%, var(--container)); margin: 0 auto; }
     .top-strip__content, .site-header__inner { align-items: flex-start; flex-direction: column; }
     .top-strip__notice { display: none; }
     .nav-toggle { display: block; margin-left: auto; }
-    .header-controls { display: none; width: 100%; }
-    .header-controls.is-open { display: flex; }
+    .header-controls, .site-header .primary-nav { display: none; width: 100%; }
+    .header-controls.is-open, .site-header .primary-nav.is-open { display: flex; }
+    .site-header__inner > .primary-nav { flex-direction: column; align-items: stretch; }
+    .site-header__inner > .primary-nav > * { width: 100%; }
     .hero { grid-template-columns: 1fr; padding-top: 3rem; }
     .hero__visual { order: -1; }
     .form-shell { grid-template-columns: 1fr; }
