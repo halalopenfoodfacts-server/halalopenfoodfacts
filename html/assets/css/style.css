@@ -131,6 +131,15 @@ main { width: min(100%, var(--container)); margin: 0 auto; }
 .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(18rem, .9fr); gap: clamp(2rem, 6vw, 5rem); align-items: center; padding: clamp(3rem, 8vw, 7rem) var(--pad); }
 .hero__content > * { max-width: 60rem; }
 .hero__subtitle { font-size: clamp(1rem, 2vw, 1.25rem); }
+.home-search {
+    display: flex; align-items: center; gap: .55rem; max-width: 48rem; margin: 1.5rem 0 .35rem;
+    padding: .45rem .55rem .45rem .9rem; border: 1px solid var(--line); border-radius: var(--radius-lg);
+    background: var(--paper-raised); box-shadow: var(--shadow-md);
+}
+.home-search__icon { color: var(--sauge); font-size: 1.5rem; line-height: 1; }
+.home-search input { flex: 1; min-width: 8rem; border: 0; outline: 0; color: var(--ink); background: transparent; }
+.home-search__hint { margin: 0 0 1rem; font-size: .82rem; }
+.home-search__scan { white-space: nowrap; }
 .hero__cta, .filters__chips, .filters__dropdowns, .advanced-filters__footer { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
 .eyebrow, .status-pill { display: inline-flex; align-items: center; gap: .4rem; color: var(--sauge-dark); font-family: var(--font-m); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
 .hero__visual img { width: 100%; max-height: 28rem; border-radius: var(--radius-xl); object-fit: cover; box-shadow: var(--shadow-lg); }
@@ -139,9 +148,21 @@ main { width: min(100%, var(--container)); margin: 0 auto; }
 .stat-card strong { display: block; color: var(--sauge-dark); font-family: var(--font-m); font-size: 1.4rem; }
 .stat-label { color: var(--ink-soft); font-size: .8rem; }
 .stat-card-link { color: inherit; }
+.hero__visual { position: relative; }
+.hero__visual .badge { display: none; }
+.seal { display: none; }
 
 .quick-links, .steps, .trusted__logos, .legal-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; padding: 2rem var(--pad); }
 .quick-links article, .step, .legal-card { padding: 1.4rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper-raised); }
+.quick-links { padding-top: 1rem; }
+.quick-links article { box-shadow: var(--shadow-xs); }
+.trust-strip { display: grid; grid-template-columns: minmax(14rem, .7fr) 1.3fr; gap: 2rem; align-items: start; padding: clamp(2rem, 5vw, 4rem) var(--pad); border-block: 1px solid var(--line); background: var(--paper-raised); }
+.trust-strip__items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.trust-strip__items article { padding-top: .25rem; border-top: 2px solid var(--sauge); }
+.trust-strip__items strong { color: var(--saffron-dark); font-family: var(--font-m); font-size: .8rem; }
+.trust-strip__items h3 { margin-top: .55rem; }
+.trust-strip__items p { font-size: .9rem; }
+.ticker-wrap, .trusted { display: none; }
 .filters, .product-grid-section, .live-feed, .api-live, .steps-section, .trusted, .legal-section, .app-callout { padding: clamp(2rem, 5vw, 4rem) var(--pad); }
 .filters { border-block: 1px solid var(--line); background: color-mix(in srgb, var(--sauge-light) 45%, var(--paper)); }
 .filters__headline { margin-bottom: 1.25rem; }
@@ -204,6 +225,8 @@ main { width: min(100%, var(--container)); margin: 0 auto; }
     .site-header__inner > .primary-nav > * { width: 100%; }
     .hero { grid-template-columns: 1fr; padding-top: 3rem; }
     .hero__visual { order: -1; }
+    .trust-strip { grid-template-columns: 1fr; }
+    .trust-strip__items { grid-template-columns: 1fr; }
     .form-shell { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
@@ -212,6 +235,9 @@ main { width: min(100%, var(--container)); margin: 0 auto; }
     .mega-search { flex-wrap: wrap; }
     .mega-search__actions { width: 100%; }
     .mega-search__actions > * { flex: 1; }
+    .home-search { flex-wrap: wrap; }
+    .home-search input { flex-basis: calc(100% - 2rem); }
+    .home-search button { flex: 1; }
     .form-grid { grid-template-columns: 1fr; }
     .input-group:has(textarea) { grid-column: auto; }
     .hero__cta > *, .primary-nav > * { width: 100%; }

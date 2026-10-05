@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Halal Open Food Facts - Alimentation transparente et Halal</title>
+<title>Halal Open Food Facts | Comprendre les produits alimentaires</title>
+<meta name="description" content="Recherchez un produit alimentaire, analysez ses ingrédients et consultez les informations halal disponibles dans une base communautaire ouverte.">
+<meta name="theme-color" content="#2F6B4A">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2F6B4A">
 </head>
 <body>
 <div id="progress-bar"></div>
@@ -117,6 +118,14 @@
       </h1>
 
       <p class="hero__subtitle" data-i18n="hero_subtitle">Analysez instantanément les aliments, vérifiez les ingrédients sensibles et explorez la plus grande base de données halal collaborative.</p>
+      <form class="home-search" id="home-search-form" role="search">
+        <label class="visually-hidden" for="home-search-input">Rechercher un produit</label>
+        <span class="home-search__icon" aria-hidden="true">⌕</span>
+        <input id="home-search-input" type="search" autocomplete="off" data-i18n-placeholder="search_placeholder" placeholder="Nom, marque, ingrédient ou code-barres">
+        <button type="submit" class="solid-btn" data-i18n="search_cta">Rechercher</button>
+        <button type="button" class="outline-btn home-search__scan" id="home-scan-button">Scanner</button>
+      </form>
+      <p class="home-search__hint">Ou utilisez le scanner pour identifier un produit en magasin.</p>
       <div class="hero__cta">
         <a href="#catalogue" class="solid-btn" data-i18n="hero_cta_explore">Explorer les produits</a>
         <a href="add.html" class="ghost-btn" data-i18n="hero_cta_contribute">Contribuer maintenant</a>
@@ -182,14 +191,22 @@
     </div>
   </section>
 
-  <div class="ticker-wrap">
-    <div class="ticker" id="tickerTrack"></div>
-  </div>
-
   <section class="quick-links" aria-label="Accès rapide">
     <article><h3 data-i18n="quick_catalogue_title">Catalogue</h3><p data-i18n="quick_catalogue_desc">Filtrez par labels halal, végétarien ou sans alcool en quelques clics.</p><a href="#catalogue" data-i18n="quick_catalogue_cta">Voir les produits →</a></article>
     <article><h3 data-i18n="quick_engagements_title">Engagements</h3><p data-i18n="quick_engagements_desc">Découvrez nos outils d'analyse d'ingrédients et la transparence des données.</p><a href="#engagements" data-i18n="quick_engagements_cta">Lire nos engagements →</a></article>
     <article><h3 data-i18n="quick_community_title">Communauté</h3><p data-i18n="quick_community_desc">Rejoignez les bénévoles qui enrichissent la base de données au quotidien.</p><a href="#communautes" data-i18n="quick_community_cta">Rencontrer la communauté →</a></article>
+  </section>
+
+  <section class="trust-strip" aria-labelledby="trust-title">
+    <div>
+      <p class="eyebrow">Une information lisible</p>
+      <h2 id="trust-title">Des données ouvertes, des décisions plus sereines.</h2>
+    </div>
+    <div class="trust-strip__items">
+      <article><strong>01</strong><h3>Lire</h3><p>Nom, marque, ingrédients et informations nutritionnelles réunis au même endroit.</p></article>
+      <article><strong>02</strong><h3>Comprendre</h3><p>Les alertes indiquent ce qui est documenté et ce qui doit encore être vérifié.</p></article>
+      <article><strong>03</strong><h3>Contribuer</h3><p>Chaque fiche peut être enrichie par la communauté à partir de données réelles.</p></article>
+    </div>
   </section>
 
   <section class="steps-section" id="comment">

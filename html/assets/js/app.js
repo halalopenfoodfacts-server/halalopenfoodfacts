@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const productGrid = document.getElementById('product-grid');
     const searchButton = document.getElementById('search-button');
     const searchInput = document.getElementById('search-input');
+    const homeSearchForm = document.getElementById('home-search-form');
+    const homeSearchInput = document.getElementById('home-search-input');
+    const homeScanButton = document.getElementById('home-scan-button');
     const paginationContainer = document.getElementById('pagination');
     const filterButtons = document.querySelectorAll('.filter-btn');
     const categorySelect = document.getElementById('category-select');
@@ -859,6 +862,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 runSearch();
             }
         });
+    }
+
+    if (homeSearchForm && homeSearchInput && searchInput) {
+        homeSearchForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            searchInput.value = homeSearchInput.value;
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            currentFilters.search = homeSearchInput.value.trim();
+            currentPage = 1;
+            fetchProducts(currentPage);
+            document.getElementById('catalogue')?.scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+
+    if (homeScanButton && barcodeButton) {
+        homeScanButton.addEventListener('click', () => barcodeButton.click());
     }
 
     const SUPPORTED_BARCODE_FORMATS = ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'];
