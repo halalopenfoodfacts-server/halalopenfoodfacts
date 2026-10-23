@@ -1,0 +1,62 @@
+[
+ {
+  "id": "france",
+  "flag": "🇫🇷",
+  "title": "France",
+  "text": "Cherchez les logos AVS, Achahada ou A.CO.R.D — les certifications les plus reconnues localement."
+ },
+ {
+  "id": "morocco",
+  "flag": "🇲🇦",
+  "title": "Maroc",
+  "text": "La grande majorité des produits locaux sont halal par défaut ; vérifiez surtout les produits importés."
+ },
+ {
+  "id": "turkey",
+  "flag": "🇹🇷",
+  "title": "Turquie",
+  "text": "La majorité des produits sont halal par défaut ; vérifiez surtout les additifs importés."
+ },
+ {
+  "id": "saudi-arabia",
+  "flag": "🇸🇦",
+  "title": "Arabie Saoudite",
+  "text": "Tous les produits alimentaires vendus sont certifiés halal par défaut."
+ },
+ {
+  "id": "united-kingdom",
+  "flag": "🇬🇧",
+  "title": "Royaume-Uni",
+  "text": "Les logos HMC ou HFA garantissent une certification indépendante reconnue."
+ },
+ {
+  "id": "indonesia",
+  "flag": "🇮🇩",
+  "title": "Indonésie",
+  "text": "Cherchez le logo MUI — obligatoire sur la majorité des produits vendus."
+ },
+ {
+  "id": "malaysia",
+  "flag": "🇲🇾",
+  "title": "Malaisie",
+  "text": "Le label JAKIM est la référence officielle et quasi systématique en supermarché."
+ },
+ {
+  "id": "united-states",
+  "flag": "🇺🇸",
+  "title": "États-Unis",
+  "text": "Marché de niche : privilégiez les épiceries spécialisées avec certification visible (IFANCA...)."
+ },
+ {
+  "id": "germany",
+  "flag": "🇩🇪",
+  "title": "Allemagne",
+  "text": "Marché plus restreint : privilégiez les épiceries turques/arabes avec certification visible."
+ },
+ {
+  "id": "belgium",
+  "flag": "🇧🇪",
+  "title": "Belgique",
+  "text": "Bonne disponibilité en épiceries spécialisées ; vérifiez les labels sur emballage."
+ }
+]
