@@ -1,0 +1,232 @@
+{
+  "portal": "food",
+  "name": "Halal Open Food Facts",
+  "short": "Halal OFF",
+  "domain": "https://halalopenfoodfacts.org",
+  "description": "Recherchez un produit alimentaire, scannez son code-barres et vérifiez les informations halal, les ingrédients sensibles et la nutrition. Base de données ouverte et communautaire.",
+  "tagline": "La base de données ouverte des produits alimentaires halal",
+  "noun": {
+    "one": "produit alimentaire",
+    "many": "produits alimentaires",
+    "short": "aliments"
+  },
+  "heroTitle": "Ce que contient <em>vraiment</em> votre assiette.",
+  "heroLead": "Scannez ou cherchez un produit : statut halal déclaré, ingrédients sensibles, additifs et nutrition, en quelques secondes.",
+  "searchPlaceholder": "Nutella, couscous, 3017620422003…",
+  "themeColor": "#1f7a47",
+  "themeColorDark": "#0e1512",
+  "backgroundColor": "#f7f3ea",
+  "manifestCategories": [
+    "food",
+    "lifestyle",
+    "shopping"
+  ],
+  "contact": "contact@halalopenfoodfacts.org",
+  "privacy": "privacy@halalopenfoodfacts.org",
+  "upstream": {
+    "name": "Open Food Facts",
+    "url": "https://world.openfoodfacts.org",
+    "productUrl": "https://world.openfoodfacts.org/product/",
+    "addUrl": "https://world.openfoodfacts.org/cgi/product.pl?type=search_or_add&action=process&code=",
+    "loginUrl": "https://world.openfoodfacts.org/cgi/login.pl",
+    "signupUrl": "https://world.openfoodfacts.org/cgi/user.pl",
+    "producersUrl": "https://world.openfoodfacts.org/producers",
+    "teamUrl": "https://world.openfoodfacts.org/team/halal-open-food-facts",
+    "apps": {
+      "ios": "https://apps.apple.com/app/open-food-facts/id588797948",
+      "android": "https://play.google.com/store/apps/details?id=org.openfoodfacts.scanner",
+      "fdroid": "https://f-droid.org/packages/org.openfoodfacts.scanner/"
+    }
+  },
+  "membershipUrl": "https://halal-open-food-facts.s2.yapla.com/fr/espace-membres",
+  "donateUrl": "https://halal-open-food-facts.s2.yapla.com/fr/campaign-16372",
+  "github": "https://github.com/halalopenfoodfacts-server/halalopenfoodfacts",
+  "facebook": "https://www.facebook.com/profile.php?id=61571584380846",
+  "sibling": {
+    "name": "Halal Open Beauty Facts",
+    "url": "https://halalopenbeautyfacts.org",
+    "noun": "cosmétiques"
+  },
+  "legal": {
+    "entity": "Association loi 1901 Halal Open Food Facts",
+    "address": "392 rue des Peupliers, 59800 Lille",
+    "director": "M. Mustapha Zentar",
+    "host": "OVH SAS, 2 rue Kellermann, 59100 Roubaix, France"
+  },
+  "features": {
+    "nutrition": true
+  },
+  "categories": [
+    {
+      "id": "en:snacks",
+      "label": "Snacks"
+    },
+    {
+      "id": "en:sweet-snacks",
+      "label": "Snacks sucrés"
+    },
+    {
+      "id": "en:beverages",
+      "label": "Boissons"
+    },
+    {
+      "id": "en:dairies",
+      "label": "Produits laitiers"
+    },
+    {
+      "id": "en:meats",
+      "label": "Viandes"
+    },
+    {
+      "id": "en:breakfasts",
+      "label": "Petit-déjeuner"
+    },
+    {
+      "id": "en:frozen-foods",
+      "label": "Surgelés"
+    },
+    {
+      "id": "en:meals",
+      "label": "Plats préparés"
+    },
+    {
+      "id": "en:biscuits-and-cakes",
+      "label": "Biscuits et gâteaux"
+    },
+    {
+      "id": "en:confectioneries",
+      "label": "Confiseries"
+    },
+    {
+      "id": "en:sauces",
+      "label": "Sauces"
+    },
+    {
+      "id": "en:cereals-and-potatoes",
+      "label": "Céréales et pommes de terre"
+    }
+  ],
+  "labels": [
+    {
+      "id": "en:organic",
+      "label": "Bio"
+    },
+    {
+      "id": "en:vegan",
+      "label": "Vegan"
+    },
+    {
+      "id": "en:vegetarian",
+      "label": "Végétarien"
+    },
+    {
+      "id": "en:no-gluten",
+      "label": "Sans gluten"
+    },
+    {
+      "id": "en:fair-trade",
+      "label": "Commerce équitable"
+    },
+    {
+      "id": "en:no-preservatives",
+      "label": "Sans conservateurs"
+    }
+  ],
+  "searchExamples": [
+    "Couscous",
+    "Bonbons",
+    "Merguez",
+    "Chocolat"
+  ],
+  "placeholderIcon": "i-package",
+  "stackExamples": [
+    "Biscuits au miel",
+    "Bière blonde",
+    "Bonbons gélifiés"
+  ],
+  "stackMeta": "Illustration",
+  "doubtfulExamples": "gélatine, E120, E471…",
+  "partners": [
+    {
+      "file": "partner-1.webp",
+      "name": "Air Algérie"
+    },
+    {
+      "file": "partner-2.webp",
+      "name": "Algerian Startup Fund"
+    },
+    {
+      "file": "partner-3.webp",
+      "name": "Al Baraka Bank"
+    },
+    {
+      "file": "partner-6.webp",
+      "name": "Qatar Foundation"
+    },
+    {
+      "file": "partner-7.webp",
+      "name": "Qatar Investment Authority"
+    },
+    {
+      "file": "partner-9.webp",
+      "name": "Saudia"
+    }
+  ],
+  "sensitiveIngredients": [
+    "porc",
+    "porcine?",
+    "pork",
+    "saindoux",
+    "lard",
+    "lardons?",
+    "bacon",
+    "jambons?",
+    "gelatines?",
+    "gelatin",
+    "alcool",
+    "alcohol",
+    "ethanol",
+    "vins?",
+    "wine",
+    "bieres?",
+    "beer",
+    "rhum",
+    "rum",
+    "whisky",
+    "cognac",
+    "liqueurs?",
+    "kirsch",
+    "e\\s?120",
+    "carmine?",
+    "cochenilles?",
+    "e\\s?441",
+    "e\\s?471",
+    "mono\\s?-?\\s?(et|and)\\s?diglycerides?",
+    "e\\s?904",
+    "shellac",
+    "e\\s?920",
+    "l\\s?-?\\s?cysteine",
+    "presure",
+    "rennet",
+    "e\\s?422",
+    "glycerine?",
+    "glycerol"
+  ],
+  "testFixtures": {
+    "halalProduct": "5053990179039",
+    "haramProduct": "8712000018825",
+    "searchQuery": "couscous",
+    "missingProduct": "0000000000017",
+    "checkerHaram": "E120"
+  },
+  "logo": {
+    "header": [
+      226,
+      48
+    ],
+    "small": [
+      188,
+      40
+    ]
+  }
+}

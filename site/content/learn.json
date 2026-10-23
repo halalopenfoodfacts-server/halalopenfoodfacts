@@ -1,0 +1,207 @@
+{
+ "checker": [
+  {
+   "term": "e120",
+   "status": "haram",
+   "text": "Cochenille : colorant extrait d'insectes, non halal."
+  },
+  {
+   "term": "cochenille",
+   "status": "haram",
+   "text": "Cochenille : non halal."
+  },
+  {
+   "term": "carmine",
+   "status": "haram",
+   "text": "Carmin : dérivé de cochenille, non halal."
+  },
+  {
+   "term": "porc",
+   "status": "haram",
+   "text": "Porc et tous ses dérivés sont interdits en Islam."
+  },
+  {
+   "term": "pork",
+   "status": "haram",
+   "text": "Porc interdit."
+  },
+  {
+   "term": "bacon",
+   "status": "haram",
+   "text": "Dérivé de porc."
+  },
+  {
+   "term": "jambon",
+   "status": "haram",
+   "text": "Dérivé de porc."
+  },
+  {
+   "term": "lard",
+   "status": "haram",
+   "text": "Graisse de porc."
+  },
+  {
+   "term": "alcool",
+   "status": "haram",
+   "text": "L'alcool est strictement interdit."
+  },
+  {
+   "term": "alcohol",
+   "status": "haram",
+   "text": "Alcool interdit."
+  },
+  {
+   "term": "vin",
+   "status": "haram",
+   "text": "Vin interdit."
+  },
+  {
+   "term": "rhum",
+   "status": "haram",
+   "text": "Alcool interdit."
+  },
+  {
+   "term": "e441",
+   "status": "doubtful",
+   "text": "Gélatine pure, souvent d'origine porcine. Exiger une certification halal."
+  },
+  {
+   "term": "gélatine",
+   "status": "doubtful",
+   "text": "Peut être porcine, bovine ou piscine. Cherchez la mention \"halal\" ou \"bovine\"."
+  },
+  {
+   "term": "gelatine",
+   "status": "doubtful",
+   "text": "Même règle que \"gélatine\"."
+  },
+  {
+   "term": "e471",
+   "status": "doubtful",
+   "text": "Mono et diglycérides d'acides gras. Peut être d'origine animale."
+  },
+  {
+   "term": "arômes naturels",
+   "status": "doubtful",
+   "text": "Peut contenir des extraits de viande non halal."
+  },
+  {
+   "term": "glycérine",
+   "status": "doubtful",
+   "text": "Glycérine / glycérol : origine à préciser."
+  },
+  {
+   "term": "glycerine",
+   "status": "doubtful",
+   "text": "Même règle."
+  },
+  {
+   "term": "e422",
+   "status": "doubtful",
+   "text": "Glycérol, origine à préciser."
+  },
+  {
+   "term": "présure",
+   "status": "doubtful",
+   "text": "La présure animale doit être halal certifiée."
+  },
+  {
+   "term": "e330",
+   "status": "halal",
+   "text": "Acide citrique, d'origine végétale ou synthétique."
+  },
+  {
+   "term": "e300",
+   "status": "halal",
+   "text": "Acide ascorbique (vitamine C), synthétique."
+  },
+  {
+   "term": "e100",
+   "status": "halal",
+   "text": "Curcumine, pigment naturel du curcuma."
+  },
+  {
+   "term": "e160a",
+   "status": "halal",
+   "text": "Bêta-carotène, d'origine végétale."
+  },
+  {
+   "term": "e322",
+   "status": "halal",
+   "text": "Lécithine de soja, généralement halal."
+  },
+  {
+   "term": "e500",
+   "status": "halal",
+   "text": "Bicarbonate de sodium."
+  },
+  {
+   "term": "sel",
+   "status": "halal",
+   "text": "Le sel est naturellement halal."
+  },
+  {
+   "term": "sucre",
+   "status": "halal",
+   "text": "Le sucre est naturellement halal."
+  },
+  {
+   "term": "eau",
+   "status": "halal",
+   "text": "L'eau est halal."
+  }
+ ],
+ "quiz": [
+  {
+   "q": "Le E120 (cochenille) est-il halal ?",
+   "choices": [
+    "Oui",
+    "Non",
+    "Ça dépend"
+   ],
+   "correct": 1,
+   "explain": "Non. Le E120 est un colorant extrait d'insectes, considéré haram par la majorité des savants."
+  },
+  {
+   "q": "La gélatine sans mention d'origine est-elle halal ?",
+   "choices": [
+    "Oui",
+    "Non",
+    "Peut-être"
+   ],
+   "correct": 1,
+   "explain": "Non. Sans précision, elle peut être porcine. Cherchez \"gélatine bovine halal\" ou un label halal."
+  },
+  {
+   "q": "L'acide citrique (E330) est-il généralement halal ?",
+   "choices": [
+    "Oui",
+    "Non",
+    "Inconnu"
+   ],
+   "correct": 0,
+   "explain": "Oui. L'acide citrique est produit par fermentation végétale et est halal."
+  },
+  {
+   "q": "Un produit cuisiné au vin est-il halal si l'alcool s'évapore ?",
+   "choices": [
+    "Oui",
+    "Non",
+    "Certains savants oui"
+   ],
+   "correct": 1,
+   "explain": "Non selon la majorité. Même si l'alcool s'évapore, le produit reste haram."
+  },
+  {
+   "q": "Le E471 (mono et diglycérides) est-il toujours halal ?",
+   "choices": [
+    "Oui",
+    "Non",
+    "Pas toujours"
+   ],
+   "correct": 2,
+   "explain": "Pas toujours. Il peut être d'origine végétale (halal) ou animale (à vérifier)."
+  }
+ ],
+ "intro": "<h2>Qu'est-ce que le halal ?</h2>\n<p>En arabe, <strong>halal</strong> (حلال) signifie « licite » ou « permis ». En alimentation, un produit halal respecte les prescriptions alimentaires de l'islam. À l'opposé, <strong>haram</strong> (حرام) désigne ce qui est interdit.</p>\n<h2>Les règles fondamentales</h2>\n<ul>\n<li><strong>Animaux autorisés :</strong> bovins, ovins, caprins, volailles (sauf rapaces), poissons et fruits de mer (selon les écoles).</li>\n<li><strong>Abattage :</strong> réalisé par un musulman, avec la mention de Bismillah, en sectionnant la jugulaire d'un seul geste.</li>\n<li><strong>Sang :</strong> interdit à la consommation.</li>\n<li><strong>Alcool :</strong> interdit, même en faible quantité.</li>\n<li><strong>Porc et dérivés :</strong> totalement interdits (gélatine, lard, saindoux…).</li>\n</ul>\n<h2>L'alcool caché</h2>\n<p>L'alcool peut se trouver dans des sauces, vinaigres, arômes ou confiseries. Même s'il « s'évapore » à la cuisson, le produit reste considéré comme haram selon la majorité des savants.</p>\n<h2>Ingrédients clairement haram</h2>\n<ul><li>Porc, lard, bacon, jambon, saindoux</li><li>Alcool, vin, bière, rhum, whisky</li><li>E120 : cochenille (colorant d'insecte)</li><li>Gélatine de porc (souvent écrite simplement « gélatine »)</li><li>Présure animale non certifiée</li></ul>\n<h2>Ingrédients à vérifier</h2>\n<ul><li>Gélatine : préciser bovine ou de poisson halal</li><li>E471 : mono- et diglycérides, végétal ou animal ?</li><li>E441 : gélatine pure</li><li>Arômes naturels : peuvent contenir des extraits de viande</li><li>Glycérine / glycérol : source à vérifier</li><li>Cire d'abeille (E901) : autorisée selon la plupart des savants</li></ul>\n<h2>Ingrédients généralement halal</h2>\n<ul><li>Acide citrique (E330)</li><li>Curcumine (E100)</li><li>Acide ascorbique (E300)</li><li>Bêta-carotène (E160a)</li><li>Lécithine de soja (E322)</li></ul>"
+}
