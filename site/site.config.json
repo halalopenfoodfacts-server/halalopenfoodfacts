@@ -3,8 +3,8 @@
   "name": "Halal Open Food Facts",
   "short": "Halal OFF",
   "domain": "https://halalopenfoodfacts.org",
-  "description": "Recherchez un produit alimentaire, scannez son code-barres et vérifiez les informations halal, les ingrédients sensibles et la nutrition. Base de données ouverte et communautaire.",
-  "tagline": "La base de données ouverte des produits alimentaires halal",
+  "description": "La première base de données mondiale des produits halal : recherchez un produit alimentaire, scannez son code-barres et vérifiez le statut halal, les ingrédients et la nutrition. Ouverte et communautaire.",
+  "tagline": "La première base de données mondiale des produits halal",
   "noun": {
     "one": "produit alimentaire",
     "many": "produits alimentaires",
