@@ -64,7 +64,7 @@ test('vérificateur d\'ingrédient : mot entier (« vinaigre » n\'est pas « vi
     await page.locator('#checker-input').fill('vinaigre');
     await page.locator('[data-checker] [type="submit"]').click();
     await expect(page.locator('[data-checker-result]')).toContainText("n'est pas dans notre liste");
-    await page.locator('#checker-input').fill('E120');
+    await page.locator('#checker-input').fill(FIX.checkerHaram);
     await page.locator('[data-checker] [type="submit"]').click();
     await expect(page.locator('.checker-result--haram')).toBeVisible();
 });

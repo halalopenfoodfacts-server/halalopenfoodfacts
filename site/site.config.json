@@ -216,6 +216,17 @@
     "halalProduct": "5053990179039",
     "haramProduct": "8712000018825",
     "searchQuery": "couscous",
-    "missingProduct": "0000000000017"
+    "missingProduct": "0000000000017",
+    "checkerHaram": "E120"
+  },
+  "logo": {
+    "header": [
+      226,
+      48
+    ],
+    "small": [
+      188,
+      40
+    ]
   }
 }

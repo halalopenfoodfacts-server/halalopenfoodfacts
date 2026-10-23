@@ -26,6 +26,7 @@ export function bindImageFallbacks(root = document) {
 }
 
 function scores(product) {
+    if (!SITE.features?.nutrition) return '';
     const grade = (product.nutriscore_grade || '').toLowerCase();
     const parts = [];
     if (/^[a-e]$/.test(grade)) parts.push(html`<span class="score score--${grade}" title="Nutri-Score ${grade.toUpperCase()}">NS ${grade.toUpperCase()}</span>`);
