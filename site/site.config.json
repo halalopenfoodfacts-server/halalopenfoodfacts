@@ -23,8 +23,8 @@
   ],
   "contact": "contact@halalopenfoodfacts.org",
   "privacy": "privacy@halalopenfoodfacts.org",
+  "contributorsCount": 105200,
   "upstream": {
-    "name": "Open Food Facts",
     "url": "https://world.openfoodfacts.org",
     "productUrl": "https://world.openfoodfacts.org/product/",
     "addUrl": "https://world.openfoodfacts.org/cgi/product.pl?type=search_or_add&action=process&code=",
